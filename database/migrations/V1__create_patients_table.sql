@@ -1,0 +1,7 @@
+CREATE TABLE IF NOT EXISTS patients (
+    id BIGSERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    phone VARCHAR(50) NOT NULL,
+    notes TEXT,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW()
+);

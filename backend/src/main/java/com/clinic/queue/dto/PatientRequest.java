@@ -1,16 +1,26 @@
 package com.clinic.queue.dto;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Email;
 
 public class PatientRequest {
 
     @NotBlank(message = "Name is required")
     private String name;
 
+    @NotBlank(message = "Email is required")
+    @Email(message = "Email should be valid")
+    private String email;
+
     @NotBlank(message = "Phone number is required")
     private String phone;
 
+    @NotBlank(message = "Password is required")
+    private String password;
+
+    private String role;
     private String notes;
+    private String adminCode; // Required only when registering as ADMIN
 
     public String getName() {
         return name;
@@ -18,6 +28,14 @@ public class PatientRequest {
 
     public void setName(String name) {
         this.name = name;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
     }
 
     public String getPhone() {
@@ -28,11 +46,35 @@ public class PatientRequest {
         this.phone = phone;
     }
 
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
+    }
+
+    public String getRole() {
+        return role;
+    }
+
+    public void setRole(String role) {
+        this.role = role;
+    }
+
     public String getNotes() {
         return notes;
     }
 
     public void setNotes(String notes) {
         this.notes = notes;
+    }
+
+    public String getAdminCode() {
+        return adminCode;
+    }
+
+    public void setAdminCode(String adminCode) {
+        this.adminCode = adminCode;
     }
 }

@@ -26,13 +26,20 @@ export DB_PASSWORD=postgres
 ```
 
 3. Open a terminal in the `backend` folder.
-4. Start the Spring Boot application:
+4. Build and start the Spring Boot application:
 
 ```bash
+mvn clean install
 mvn spring-boot:run
 ```
 
-The backend will start on `http://localhost:8080`.
+The backend will start on `http://localhost:8080` by default.
+
+> If port `8080` is already in use, run with an alternate port:
+
+```bash
+mvn spring-boot:run -Dspring-boot.run.arguments="--server.port=8081"
+```
 
 ### Database migrations
 

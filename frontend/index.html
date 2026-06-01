@@ -1,0 +1,1088 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MediLine Clinic</title>
+    <style>
+        body {
+            font-family: Inter, Arial, sans-serif;
+            margin: 0;
+            min-height: 100vh;
+            background: radial-gradient(circle at top, #eef6ff 0%, #f8fafc 45%, #ffffff 100%);
+            color: #1f2937;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 2rem 1rem;
+        }
+
+        .page-shell {
+            width: min(54rem, 100%);
+        }
+
+        .hero {
+            text-align: center;
+            margin-bottom: 1.75rem;
+        }
+
+        .hero h1 {
+            font-size: clamp(2rem, 4vw, 3rem);
+            margin: 0;
+            letter-spacing: -0.03em;
+        }
+
+        .hero p {
+            margin: 1rem auto 0;
+            max-width: 42rem;
+            color: #4b5563;
+            line-height: 1.7;
+        }
+
+        .card {
+            background: white;
+            border-radius: 24px;
+            box-shadow: 0 24px 80px rgba(15, 23, 42, 0.08);
+            padding: 2rem;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .section-title {
+            font-size: 1.1rem;
+            color: #111827;
+            margin: 0 0 1rem 0;
+            letter-spacing: 0.01em;
+        }
+
+        form {
+            display: grid;
+            gap: 1rem;
+        }
+
+        label,
+        select,
+        input,
+        textarea,
+        button {
+            width: 100%;
+        }
+
+        label {
+            display: grid;
+            gap: 0.5rem;
+            font-weight: 600;
+            color: #111827;
+        }
+
+        input,
+        textarea,
+        select {
+            padding: 1rem 1.1rem;
+            font-size: 1rem;
+            border-radius: 14px;
+            border: 1px solid #d1d5db;
+            background: #f9fafb;
+            color: #111827;
+            outline: none;
+        }
+
+        input:focus,
+        textarea:focus,
+        select:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.12);
+        }
+
+        textarea {
+            min-height: 7rem;
+            resize: vertical;
+        }
+
+        button {
+            padding: 1rem 1.1rem;
+            border-radius: 14px;
+            border: none;
+            font-size: 1rem;
+            font-weight: 700;
+            color: white;
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        button:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: 0 18px 40px rgba(37, 99, 235, 0.18);
+        }
+
+        button:disabled {
+            background: #bfdbfe;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .message {
+            margin-top: 1rem;
+            padding: 1rem 1.1rem;
+            border-radius: 14px;
+            line-height: 1.5;
+            border: 1px solid transparent;
+        }
+
+        .success {
+            background: #ecfdf5;
+            border-color: #86efac;
+            color: #166534;
+        }
+
+        .error {
+            background: #fef2f2;
+            border-color: #fca5a5;
+            color: #991b1b;
+        }
+
+        .switch-row {
+            display: grid;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .card-grid {
+            display: grid;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .card-panel {
+            padding: 1.25rem;
+            background: #f8fafc;
+            border-radius: 20px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .helper-text {
+            color: #4b5563;
+            line-height: 1.6;
+        }
+
+        .table-section {
+            margin-top: 1.75rem;
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 16px;
+            overflow: hidden;
+        }
+
+        th,
+        td {
+            padding: 0.9rem 1rem;
+            text-align: left;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        th {
+            background: #f9fafb;
+            font-weight: 700;
+        }
+
+        .actions {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .actions button {
+            padding: 0.7rem 0.9rem;
+            font-size: 0.9rem;
+            border-radius: 12px;
+            background: #2563eb;
+        }
+
+        .actions button:hover:not(:disabled) {
+            transform: none;
+            box-shadow: none;
+        }
+
+        .auth-container {
+            width: 100%;
+        }
+
+        .tab-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .tab-btn {
+            padding: 1rem;
+            border-radius: 12px;
+            border: 2px solid #e5e7eb;
+            background: white;
+            color: #6b7280;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .tab-btn.active {
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+            color: white;
+            border-color: #2563eb;
+        }
+
+        .tab-btn:hover:not(.active) {
+            border-color: #3b82f6;
+            color: #2563eb;
+        }
+
+        .auth-section {
+            display: none;
+        }
+
+        .auth-section.active {
+            display: block;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        @media (max-width: 720px) {
+            .hero p {
+                font-size: 0.95rem;
+            }
+
+            .card-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="page-shell">
+        <div class="hero">
+            <h1>MediLine Clinic</h1>
+            <p>Secure patient registration for visitors and a separate admin sign-in for nurses and doctors. The website
+                is now clean, focused, and built to look professional.</p>
+        </div>
+        <div class="card">
+            <div id="root"></div>
+        </div>
+    </div>
+    <script>
+        const API_BASE = 'http://localhost:8080/api';
+        const API_URL = `${API_BASE}/patients`;
+        const APPOINTMENTS_URL = `${API_BASE}/appointments`;
+
+        let adminAuthHeader = null;
+
+        function renderAuthPage(root) {
+            root.innerHTML = `
+                <div class="auth-container">
+                    <div class="tab-buttons">
+                        <button class="tab-btn active" data-tab="login">Login</button>
+                        <button class="tab-btn" data-tab="register">Register</button>
+                    </div>
+                    
+                    <div id="login-section" class="auth-section active">
+                        <form id="login-form">
+                            <label>
+                                Login type
+                                <select id="login-type" aria-label="Select patient or admin login">
+                                    <option value="patient" selected>Patient</option>
+                                    <option value="admin">Admin</option>
+                                </select>
+                            </label>
+                            <label id="login-identifier-label">
+                                <span class="label-text">Email</span>
+                                <input type="text" id="login-identifier" required placeholder="you@example.com" />
+                            </label>
+                            <label>
+                                Password
+                                <input type="password" id="login-password" required />
+                            </label>
+                            <button type="submit">Login</button>
+                            <p id="login-helper" class="helper-text">Patient login uses email/password. Admin login uses the admin email and password created by an existing administrator.</p>
+                        </form>
+                        <div id="login-status"></div>
+                    </div>
+
+                    <div id="register-section" class="auth-section">
+                        <form id="register-form">
+                            <label>
+                                Full Name
+                                <input type="text" id="register-name" required />
+                            </label>
+                            <label>
+                                Register as
+                                <select id="register-role" aria-label="Select registration type">
+                                    <option value="patient" selected>Patient</option>
+                                    <option value="admin">Administrator</option>
+                                </select>
+                            </label>
+                            <p id="register-helper" class="helper-text">Register as a patient. Administrators must provide a valid registration code.</p>
+                            <label>
+                                Email
+                                <input type="email" id="register-email" required />
+                            </label>
+                            <label>
+                                Phone
+                                <input type="text" id="register-phone" required />
+                            </label>
+                            <label>
+                                Password
+                                <input type="password" id="register-password" required />
+                            </label>
+                            <label>
+                                Confirm Password
+                                <input type="password" id="register-confirm-password" required />
+                            </label>
+                            <label id="admin-code-label" class="hidden">
+                                Admin Registration Code
+                                <input type="password" id="register-admin-code" placeholder="Enter admin code" />
+                            </label>
+                            <button type="submit">Register</button>
+                        </form>
+                        <div id="register-status"></div>
+                    </div>
+                </div>
+            `;
+
+            // Tab switching
+            const tabButtons = root.querySelectorAll('.tab-btn');
+            const authSections = root.querySelectorAll('.auth-section');
+
+            tabButtons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const tabName = btn.dataset.tab;
+
+                    tabButtons.forEach(b => b.classList.remove('active'));
+                    authSections.forEach(s => s.classList.remove('active'));
+
+                    btn.classList.add('active');
+                    root.querySelector(`#${tabName}-section`).classList.add('active');
+                });
+            });
+
+            // Login form
+            const loginTypeSelect = root.querySelector('#login-type');
+            const loginIdentifierLabel = root.querySelector('#login-identifier-label .label-text');
+            const loginIdentifierInput = root.querySelector('#login-identifier');
+            const loginForm = root.querySelector('#login-form');
+            const loginStatus = root.querySelector('#login-status');
+
+            loginTypeSelect.addEventListener('change', () => {
+                if (loginTypeSelect.value === 'admin') {
+                    loginIdentifierLabel.textContent = 'Admin email';
+                    loginIdentifierInput.placeholder = 'admin@mediline.clinic';
+                } else {
+                    loginIdentifierLabel.textContent = 'Email';
+                    loginIdentifierInput.placeholder = 'you@example.com';
+                }
+            });
+
+            loginForm.addEventListener('submit', async (event) => {
+                event.preventDefault();
+
+                const loginType = loginTypeSelect.value;
+                const identifier = loginIdentifierInput.value.trim();
+                const password = root.querySelector('#login-password').value.trim();
+
+                loginStatus.textContent = 'Logging in...';
+                loginStatus.className = 'message';
+
+                if (loginType === 'admin') {
+                    await handleAdminLogin(identifier, password, loginStatus);
+                } else {
+                    await handlePatientLogin(identifier, password, loginStatus);
+                }
+            });
+
+            // Register form
+            const registerForm = root.querySelector('#register-form');
+            const registerStatus = root.querySelector('#register-status');
+            const registerRoleSelect = root.querySelector('#register-role');
+            const adminCodeLabel = root.querySelector('#admin-code-label');
+            const registerHelper = root.querySelector('#register-helper');
+
+            // Show/hide admin code field based on role selection
+            registerRoleSelect.addEventListener('change', () => {
+                if (registerRoleSelect.value === 'admin') {
+                    adminCodeLabel.classList.remove('hidden');
+                    registerHelper.textContent = 'Administrators must provide a valid registration code.';
+                } else {
+                    adminCodeLabel.classList.add('hidden');
+                    registerHelper.textContent = 'Register as a patient. Administrators must provide a valid registration code.';
+                }
+            });
+
+            registerForm.addEventListener('submit', async (event) => {
+                event.preventDefault();
+
+                const name = root.querySelector('#register-name').value.trim();
+                const email = root.querySelector('#register-email').value.trim();
+                const phone = root.querySelector('#register-phone').value.trim();
+                const password = root.querySelector('#register-password').value.trim();
+                const confirmPassword = root.querySelector('#register-confirm-password').value.trim();
+                const role = registerRoleSelect.value;
+
+                if (password !== confirmPassword) {
+                    registerStatus.textContent = 'Passwords do not match';
+                    registerStatus.className = 'message error';
+                    return;
+                }
+
+                const registeringAs = role === 'admin' ? 'administrator' : 'patient';
+                registerStatus.textContent = `Registering as ${registeringAs}...`;
+                registerStatus.className = 'message';
+
+                try {
+                    const payload = {
+                        name,
+                        email,
+                        phone,
+                        password,
+                        role
+                    };
+
+                    // Add admin code if registering as admin
+                    if (role === 'admin') {
+                        const adminCode = root.querySelector('#register-admin-code').value.trim();
+                        if (!adminCode) {
+                            registerStatus.textContent = 'Admin registration code is required';
+                            registerStatus.className = 'message error';
+                            return;
+                        }
+                        payload.adminCode = adminCode;
+                    }
+
+                    const response = await fetch(API_URL, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (!response.ok) {
+                        const errorBody = await response.text();
+                        throw new Error(errorBody || `Failed to register ${registeringAs}`);
+                    }
+
+                    const user = await response.json();
+                    const userType = role === 'admin' ? 'Administrator' : 'Patient';
+                    registerStatus.textContent = `Registration successful! Welcome ${user.name} (${userType})`;
+                    registerStatus.className = 'message success';
+                    registerForm.reset();
+                    adminCodeLabel.classList.add('hidden');
+                } catch (error) {
+                    registerStatus.textContent = error.message;
+                    registerStatus.className = 'message error';
+                }
+            });
+        }
+
+        function escapeHtml(value) {
+            return String(value)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        async function handlePatientLogin(email, password, statusElement) {
+            try {
+                const response = await fetch(`${API_BASE}/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ email, password })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    statusElement.textContent = data.message || 'Invalid email or password';
+                    statusElement.className = 'message error';
+                    return;
+                }
+
+                statusElement.textContent = `Welcome ${data.name}! Login successful.`;
+                statusElement.className = 'message success';
+                localStorage.setItem('authType', 'patient');
+                localStorage.setItem('token', data.token);
+                localStorage.setItem('patientId', data.patientId);
+                localStorage.setItem('patientName', data.name);
+                localStorage.setItem('patientEmail', email);
+
+                setTimeout(() => {
+                    renderDashboard(data.name, data.patientId, email);
+                }, 1000);
+            } catch (error) {
+                statusElement.textContent = 'Error: Unable to connect to server. Make sure backend is running on localhost:8080';
+                statusElement.className = 'message error';
+            }
+        }
+
+        async function fetchAdminApi(path, options = {}) {
+            const headers = {
+                ...(options.headers || {})
+            };
+
+            if (adminAuthHeader) {
+                headers.Authorization = adminAuthHeader;
+            }
+
+            if (options.body && !headers['Content-Type']) {
+                headers['Content-Type'] = 'application/json';
+            }
+
+            const response = await fetch(`${API_BASE}${path}`, {
+                ...options,
+                headers
+            });
+
+            if (!response.ok) {
+                const text = await response.text();
+                throw new Error(text || response.statusText);
+            }
+
+            if (response.status === 204) {
+                return null;
+            }
+
+            return response.json();
+        }
+
+        async function handleAdminLogin(username, password, statusElement) {
+            try {
+                const header = `Basic ${btoa(`${username}:${password}`)}`;
+                adminAuthHeader = header;
+                statusElement.textContent = 'Validating admin credentials...';
+                statusElement.className = 'message';
+
+                await fetchAdminApi('/patients');
+                await fetchAdminApi('/appointments');
+
+                localStorage.setItem('authType', 'admin');
+                localStorage.setItem('adminAuth', header);
+                localStorage.setItem('adminName', username);
+
+                statusElement.textContent = `Welcome ${username}! Admin login successful.`;
+                statusElement.className = 'message success';
+
+                setTimeout(() => {
+                    renderAdminDashboard(username);
+                }, 500);
+            } catch (error) {
+                adminAuthHeader = null;
+                statusElement.textContent = error.message || 'Invalid admin credentials';
+                statusElement.className = 'message error';
+            }
+        }
+
+        async function fetchAppointments() {
+            const response = await fetch(APPOINTMENTS_URL, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error('Unable to load appointments');
+            }
+
+            return response.json();
+        }
+
+        async function scheduleAppointment(patientId) {
+            const timeInput = document.getElementById('appointment-time');
+            const statusBox = document.getElementById('appointment-status');
+            const button = document.getElementById('appointment-submit');
+
+            const scheduledAt = timeInput.value;
+
+            if (!scheduledAt) {
+                statusBox.textContent = 'Please choose a date and time for the appointment.';
+                statusBox.className = 'message error';
+                return;
+            }
+
+            button.disabled = true;
+            button.textContent = 'Requesting...';
+            statusBox.textContent = 'Submitting appointment request...';
+            statusBox.className = 'message';
+
+            try {
+                const response = await fetch(APPOINTMENTS_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        patientId: Number(patientId),
+                        scheduledAt
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(errorText || 'Failed to schedule appointment');
+                }
+
+                const appointment = await response.json();
+                statusBox.textContent = `Appointment request submitted for ${escapeHtml(formatDate(appointment.scheduledAt))}. An admin will confirm it soon.`;
+                statusBox.className = 'message success';
+                timeInput.value = '';
+            } catch (error) {
+                statusBox.textContent = error.message;
+                statusBox.className = 'message error';
+            } finally {
+                button.disabled = false;
+                button.textContent = 'Request Appointment';
+            }
+        }
+
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleString('en-US', {
+                weekday: 'short',
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        function renderAppointments(appointments, patientId) {
+            const container = document.getElementById('appointments-container');
+            const patientString = String(patientId);
+            const patientAppointments = appointments.filter(app => String(app.patientId) === patientString);
+
+            if (patientAppointments.length === 0) {
+                container.innerHTML = '<p>No upcoming appointments scheduled yet.</p>';
+                return;
+            }
+
+            const rows = patientAppointments.map(app => `
+                <tr>
+                    <td>${escapeHtml(String(app.id))}</td>
+                    <td>${escapeHtml(app.patientName)}</td>
+                    <td>${escapeHtml(app.reason || '—')}</td>
+                    <td>${escapeHtml(formatDate(app.scheduledAt))}</td>
+                </tr>
+            `).join('');
+
+            container.innerHTML = `
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Patient</th>
+                                <th>Reason</th>
+                                <th>Scheduled At</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${rows}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+
+        async function loadPatientAppointments(patientId) {
+            const container = document.getElementById('appointments-container');
+            try {
+                const appointments = await fetchAppointments();
+                renderAppointments(appointments, patientId);
+            } catch (error) {
+                container.innerHTML = `<p class="message error">${escapeHtml(error.message)}</p>`;
+            }
+        }
+
+        async function fetchAdminPatients(search = '') {
+            const patients = await fetchAdminApi('/patients');
+            if (!search) {
+                return patients;
+            }
+            const lowerSearch = search.toLowerCase();
+            return patients.filter(patient =>
+                patient.name.toLowerCase().includes(lowerSearch) ||
+                patient.phone.toLowerCase().includes(lowerSearch) ||
+                (patient.email || '').toLowerCase().includes(lowerSearch)
+            );
+        }
+
+        async function fetchAdminAppointments() {
+            return fetchAdminApi('/appointments');
+        }
+
+        function renderAdminPatientTable(patients) {
+            const container = document.getElementById('patient-table-container');
+            if (patients.length === 0) {
+                container.innerHTML = '<p>No patients found.</p>';
+                return;
+            }
+
+            const rows = patients.map(patient => `
+                <tr>
+                    <td>${escapeHtml(String(patient.id))}</td>
+                    <td>${escapeHtml(patient.name)}</td>
+                    <td>${escapeHtml(patient.email || '—')}</td>
+                    <td>${escapeHtml(patient.phone)}</td>
+                </tr>
+            `).join('');
+
+            container.innerHTML = `
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Phone</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${rows}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+
+        function renderAdminAppointmentTable(appointments) {
+            const container = document.getElementById('appointment-table-container');
+            if (appointments.length === 0) {
+                container.innerHTML = '<p>No appointments found.</p>';
+                return;
+            }
+
+            const rows = appointments.map(app => `
+                <tr>
+                    <td>${escapeHtml(String(app.id))}</td>
+                    <td>${escapeHtml(app.patientName)}</td>
+                    <td>${escapeHtml(app.reason || '—')}</td>
+                    <td>${escapeHtml(formatDate(app.scheduledAt))}</td>
+                </tr>
+            `).join('');
+
+            container.innerHTML = `
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Patient</th>
+                                <th>Reason</th>
+                                <th>Scheduled At</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${rows}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+
+        async function loadAdminData(search = '') {
+            const patients = await fetchAdminPatients(search);
+            const appointments = await fetchAdminAppointments();
+            const select = document.getElementById('appointment-patient');
+            if (select) {
+                select.innerHTML = patients.map(patient => `
+                    <option value="${escapeHtml(String(patient.id))}">
+                        ${escapeHtml(patient.name)}${patient.email ? ` (${escapeHtml(patient.email)})` : ''}
+                    </option>
+                `).join('');
+            }
+            renderAdminPatientTable(patients);
+            renderAdminAppointmentTable(appointments);
+        }
+
+        function renderDashboard(name, patientId, email) {
+            const root = document.getElementById('root');
+            root.innerHTML = `
+                <div class="auth-container">
+                    <div class="section-title">Patient Dashboard</div>
+                    <p class="helper-text">Welcome back, ${escapeHtml(name)}. This is your secure dashboard.</p>
+                    <div class="card-panel">
+                        <h2>Profile summary</h2>
+                        <p><strong>Patient ID:</strong> ${escapeHtml(String(patientId))}</p>
+                        <p><strong>Email:</strong> ${escapeHtml(email || 'Not available')}</p>
+                        <p><strong>Status:</strong> Registered patient</p>
+                    </div>
+                    <div class="card-panel">
+                        <h2>Book a new appointment request</h2>
+                        <p class="helper-text">Submit the date and time you want. An admin will confirm the booking.</p>
+                        <label>
+                            Date & time
+                            <input type="datetime-local" id="appointment-time" required />
+                        </label>
+                        <button type="button" id="appointment-submit">Request Appointment</button>
+                        <div id="appointment-status"></div>
+                    </div>
+                    <div class="card-panel">
+                        <h2>Next steps</h2>
+                        <p>You can use this dashboard to review your appointment details and log out when finished.</p>
+                        <button id="logout-button">Sign out</button>
+                    </div>
+                </div>
+            `;
+
+            root.querySelector('#appointment-submit').addEventListener('click', () => {
+                scheduleAppointment(patientId);
+            });
+
+            root.querySelector('#logout-button').addEventListener('click', () => {
+                localStorage.removeItem('authType');
+                localStorage.removeItem('token');
+                localStorage.removeItem('patientId');
+                localStorage.removeItem('patientName');
+                localStorage.removeItem('patientEmail');
+                renderAuthPage(root);
+            });
+        }
+
+        function renderAdminDashboard(username) {
+            const root = document.getElementById('root');
+            root.innerHTML = `
+                <div class="auth-container">
+                    <div class="section-title">Admin Dashboard</div>
+                    <p class="helper-text">Welcome back, ${escapeHtml(username)}. Manage patients and appointments from here.</p>
+                    <div class="card-grid">
+                        <div class="card-panel">
+                            <h2>Search patients</h2>
+                            <form id="admin-search-form">
+                                <label>
+                                    Search by name, phone, or email
+                                    <input id="admin-patient-search" type="search" placeholder="Search patients..." />
+                                </label>
+                                <button type="submit">Search</button>
+                            </form>
+                        </div>
+                        <div class="card-panel">
+                            <h2>Create admin user</h2>
+                            <form id="admin-create-form">
+                                <label>
+                                    Full Name
+                                    <input type="text" id="admin-create-name" required />
+                                </label>
+                                <label>
+                                    Email
+                                    <input type="email" id="admin-create-email" required />
+                                </label>
+                                <label>
+                                    Phone
+                                    <input type="text" id="admin-create-phone" required />
+                                </label>
+                                <label>
+                                    Password
+                                    <input type="password" id="admin-create-password" required />
+                                </label>
+                                <label>
+                                    Confirm Password
+                                    <input type="password" id="admin-create-confirm-password" required />
+                                </label>
+                                <button type="submit">Create Admin</button>
+                            </form>
+                            <div id="admin-create-status"></div>
+                        </div>
+                        <div class="card-panel">
+                            <h2>Schedule appointment</h2>
+                            <form id="admin-appointment-form">
+                                <label>
+                                    Patient
+                                    <select id="appointment-patient" required></select>
+                                </label>
+                                <label>
+                                    Date & time
+                                    <input type="datetime-local" id="appointment-time" required />
+                                </label>
+                                <label>
+                                    Reason
+                                    <textarea id="appointment-reason" placeholder="Brief appointment details..."></textarea>
+                                </label>
+                                <button type="submit">Create Appointment</button>
+                            </form>
+                            <div id="appointment-status"></div>
+                        </div>
+                    </div>
+                    <div id="dashboard-status" class="message"></div>
+                    <section class="table-section">
+                        <div class="section-title">Patients</div>
+                        <div id="patient-table-container"></div>
+                    </section>
+                    <section class="table-section">
+                        <div class="section-title">Appointments</div>
+                        <div id="appointment-table-container"></div>
+                    </section>
+                    <div class="card-panel">
+                        <button id="logout-button">Sign out</button>
+                    </div>
+                </div>
+            `;
+
+            loadAdminData().catch(error => {
+                const status = document.getElementById('dashboard-status');
+                if (status) {
+                    status.textContent = error.message;
+                    status.className = 'message error';
+                }
+            });
+
+            const searchForm = root.querySelector('#admin-search-form');
+            const appointmentForm = root.querySelector('#admin-appointment-form');
+
+            searchForm.addEventListener('submit', async event => {
+                event.preventDefault();
+                const searchValue = root.querySelector('#admin-patient-search').value.trim();
+                await loadAdminData(searchValue);
+            });
+
+            appointmentForm.addEventListener('submit', async event => {
+                event.preventDefault();
+                const patientId = root.querySelector('#appointment-patient').value;
+                await scheduleAdminAppointment(patientId);
+            });
+
+            const adminCreateForm = root.querySelector('#admin-create-form');
+            if (adminCreateForm) {
+                adminCreateForm.addEventListener('submit', async event => {
+                    event.preventDefault();
+                    await createAdminUser();
+                });
+            }
+
+            root.querySelector('#logout-button').addEventListener('click', () => {
+                localStorage.removeItem('authType');
+                localStorage.removeItem('adminAuth');
+                localStorage.removeItem('adminName');
+                adminAuthHeader = null;
+                renderAuthPage(root);
+            });
+        }
+
+        async function scheduleAdminAppointment(patientId) {
+            const timeInput = document.getElementById('appointment-time');
+            const statusBox = document.getElementById('appointment-status');
+            const button = document.getElementById('appointment-submit');
+
+            const scheduledAt = timeInput.value;
+
+            if (!scheduledAt) {
+                statusBox.textContent = 'Please choose a date and time for the appointment.';
+                statusBox.className = 'message error';
+                return;
+            }
+
+            button.disabled = true;
+            button.textContent = 'Creating...';
+            statusBox.textContent = 'Scheduling appointment...';
+            statusBox.className = 'message';
+
+            try {
+                const response = await fetchAdminApi('/appointments', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        patientId: Number(patientId),
+                        scheduledAt
+                    })
+                });
+
+                statusBox.textContent = `Appointment booked for ${escapeHtml(formatDate(response.scheduledAt))}`;
+                statusBox.className = 'message success';
+                timeInput.value = '';
+                await loadAdminData();
+            } catch (error) {
+                statusBox.textContent = error.message;
+                statusBox.className = 'message error';
+            } finally {
+                button.disabled = false;
+                button.textContent = 'Create Appointment';
+            }
+        }
+
+        async function createAdminUser() {
+            const statusBox = document.getElementById('admin-create-status');
+            const name = document.getElementById('admin-create-name').value.trim();
+            const email = document.getElementById('admin-create-email').value.trim();
+            const phone = document.getElementById('admin-create-phone').value.trim();
+            const password = document.getElementById('admin-create-password').value.trim();
+            const confirmPassword = document.getElementById('admin-create-confirm-password').value.trim();
+
+            if (password !== confirmPassword) {
+                statusBox.textContent = 'Passwords do not match';
+                statusBox.className = 'message error';
+                return;
+            }
+
+            statusBox.textContent = 'Creating admin account...';
+            statusBox.className = 'message';
+
+            try {
+                await fetchAdminApi('/admins', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        name,
+                        email,
+                        phone,
+                        password
+                    })
+                });
+
+                statusBox.textContent = `Admin account ${escapeHtml(email)} created.`;
+                statusBox.className = 'message success';
+                document.getElementById('admin-create-form').reset();
+            } catch (error) {
+                statusBox.textContent = error.message;
+                statusBox.className = 'message error';
+            }
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            const root = document.getElementById('root');
+            const authType = localStorage.getItem('authType');
+            const adminName = localStorage.getItem('adminName');
+            const storedAdminAuth = localStorage.getItem('adminAuth');
+            const token = localStorage.getItem('token');
+            const patientName = localStorage.getItem('patientName');
+            const patientId = localStorage.getItem('patientId');
+            const patientEmail = localStorage.getItem('patientEmail');
+
+            if (authType === 'admin' && adminName && storedAdminAuth) {
+                adminAuthHeader = storedAdminAuth;
+                renderAdminDashboard(adminName);
+            } else if (authType === 'patient' && token && patientName && patientId) {
+                renderDashboard(patientName, patientId, patientEmail);
+            } else {
+                renderAuthPage(root);
+            }
+        });
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,7 @@
+ version |         description         |        installed_on        | success |  checksum  
+---------+-----------------------------+----------------------------+---------+------------
+ 1       | create patients table       | 2026-06-01 10:01:20.808672 | t       | 1913912071
+ 2       | create appointments table   | 2026-06-01 11:20:35.586805 | t       |  352138375
+ 3       | add auth fields to patients | 2026-06-01 13:17:49.684774 | t       | -163491966
+(3 rows)
+

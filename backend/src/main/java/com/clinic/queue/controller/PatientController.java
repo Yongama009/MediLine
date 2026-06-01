@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -30,14 +31,18 @@ public class PatientController {
     }
 
     @PostMapping
-    public ResponseEntity<Patient> registerPatient(@Valid @RequestBody PatientRequest request) {
-        Patient savedPatient = patientService.registerPatient(request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(savedPatient);
+    public ResponseEntity<?> registerPatient(@Valid @RequestBody PatientRequest request) {
+        try {
+            Patient savedPatient = patientService.registerPatient(request);
+            return ResponseEntity.status(HttpStatus.CREATED).body(savedPatient);
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ex.getMessage());
+        }
     }
 
     @GetMapping
-    public ResponseEntity<List<Patient>> getAllPatients() {
-        return ResponseEntity.ok(patientService.getAllPatients());
+    public ResponseEntity<List<Patient>> getAllPatients(@RequestParam(required = false, name = "q") String query) {
+        return ResponseEntity.ok(patientService.searchPatients(query));
     }
 
     @GetMapping("/{id}")

@@ -1,4 +1,59 @@
 -------------------------------------------------------------------------------
 Test set: com.clinic.queue.controller.PatientControllerTest
 -------------------------------------------------------------------------------
-Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 10.74 s -- in com.clinic.queue.controller.PatientControllerTest
+Tests run: 5, Failures: 5, Errors: 0, Skipped: 0, Time elapsed: 6.606 s <<< FAILURE! -- in com.clinic.queue.controller.PatientControllerTest
+com.clinic.queue.controller.PatientControllerTest.shouldGetPatientById -- Time elapsed: 0.812 s <<< FAILURE!
+java.lang.AssertionError: Status expected:<201> but was:<400>
+	at org.springframework.test.util.AssertionErrors.fail(AssertionErrors.java:59)
+	at org.springframework.test.util.AssertionErrors.assertEquals(AssertionErrors.java:122)
+	at org.springframework.test.web.servlet.result.StatusResultMatchers.lambda$matcher$9(StatusResultMatchers.java:637)
+	at org.springframework.test.web.servlet.MockMvc$1.andExpect(MockMvc.java:214)
+	at com.clinic.queue.controller.PatientControllerTest.shouldGetPatientById(PatientControllerTest.java:65)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+
+com.clinic.queue.controller.PatientControllerTest.shouldGetAllPatients -- Time elapsed: 0.018 s <<< FAILURE!
+java.lang.AssertionError: Status expected:<201> but was:<400>
+	at org.springframework.test.util.AssertionErrors.fail(AssertionErrors.java:59)
+	at org.springframework.test.util.AssertionErrors.assertEquals(AssertionErrors.java:122)
+	at org.springframework.test.web.servlet.result.StatusResultMatchers.lambda$matcher$9(StatusResultMatchers.java:637)
+	at org.springframework.test.web.servlet.MockMvc$1.andExpect(MockMvc.java:214)
+	at com.clinic.queue.controller.PatientControllerTest.shouldGetAllPatients(PatientControllerTest.java:53)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+
+com.clinic.queue.controller.PatientControllerTest.shouldUpdatePatient -- Time elapsed: 0.016 s <<< FAILURE!
+java.lang.AssertionError: Status expected:<201> but was:<400>
+	at org.springframework.test.util.AssertionErrors.fail(AssertionErrors.java:59)
+	at org.springframework.test.util.AssertionErrors.assertEquals(AssertionErrors.java:122)
+	at org.springframework.test.web.servlet.result.StatusResultMatchers.lambda$matcher$9(StatusResultMatchers.java:637)
+	at org.springframework.test.web.servlet.MockMvc$1.andExpect(MockMvc.java:214)
+	at com.clinic.queue.controller.PatientControllerTest.shouldUpdatePatient(PatientControllerTest.java:83)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+
+com.clinic.queue.controller.PatientControllerTest.shouldDeletePatient -- Time elapsed: 0.017 s <<< FAILURE!
+java.lang.AssertionError: Status expected:<201> but was:<400>
+	at org.springframework.test.util.AssertionErrors.fail(AssertionErrors.java:59)
+	at org.springframework.test.util.AssertionErrors.assertEquals(AssertionErrors.java:122)
+	at org.springframework.test.web.servlet.result.StatusResultMatchers.lambda$matcher$9(StatusResultMatchers.java:637)
+	at org.springframework.test.web.servlet.MockMvc$1.andExpect(MockMvc.java:214)
+	at com.clinic.queue.controller.PatientControllerTest.shouldDeletePatient(PatientControllerTest.java:110)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+
+com.clinic.queue.controller.PatientControllerTest.shouldRegisterPatient -- Time elapsed: 0.020 s <<< FAILURE!
+java.lang.AssertionError: Status expected:<201> but was:<400>
+	at org.springframework.test.util.AssertionErrors.fail(AssertionErrors.java:59)
+	at org.springframework.test.util.AssertionErrors.assertEquals(AssertionErrors.java:122)
+	at org.springframework.test.web.servlet.result.StatusResultMatchers.lambda$matcher$9(StatusResultMatchers.java:637)
+	at org.springframework.test.web.servlet.MockMvc$1.andExpect(MockMvc.java:214)
+	at com.clinic.queue.controller.PatientControllerTest.shouldRegisterPatient(PatientControllerTest.java:42)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+
