@@ -270,6 +270,9 @@
             }
         }
     </style>
+    <!-- flatpickr date/time picker to allow disabling weekends and improve UX -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 </head>
 
 <body>
@@ -289,6 +292,9 @@
         const APPOINTMENTS_URL = `${API_BASE}/appointments`;
 
         let adminAuthHeader = null;
+        let patientAuthHeader = null;
+        let patientPollInterval = null;
+        let lastPatientAppointments = {};
 
         function renderAuthPage(root) {
             root.innerHTML = `
@@ -343,6 +349,10 @@
                                 Phone
                                 <input type="text" id="register-phone" required />
                             </label>
+                                    <label>
+                                        <input type="checkbox" id="register-sms-optin" />
+                                        I agree to receive SMS confirmations for appointments
+                                    </label>
                             <label>
                                 Password
                                 <input type="password" id="register-password" required />
@@ -505,6 +515,26 @@
                 .replace(/'/g, '&#39;');
         }
 
+        function initDatePickers() {
+            // If flatpickr is available, initialize pickers and disable weekends
+            if (typeof flatpickr === 'function') {
+                // apply to any element with id appointment-time (patient/admin contexts)
+                const el = document.getElementById('appointment-time');
+                if (el && !el._flatpickr) {
+                    flatpickr(el, {
+                        enableTime: true,
+                        dateFormat: "Y-m-d\TH:i",
+                        time_24hr: false,
+                        // disable Saturdays (6) and Sundays (0)
+                        disable: [function(date) {
+                            const d = date.getDay();
+                            return d === 0 || d === 6;
+                        }]
+                    });
+                }
+            }
+        }
+
         async function handlePatientLogin(email, password, statusElement) {
             try {
                 const response = await fetch(`${API_BASE}/auth/login`, {
@@ -530,6 +560,10 @@
                 localStorage.setItem('patientId', data.patientId);
                 localStorage.setItem('patientName', data.name);
                 localStorage.setItem('patientEmail', email);
+                // store basic auth header so we can call protected endpoints
+                const header = `Basic ${btoa(`${email}:${password}`)}`;
+                patientAuthHeader = header;
+                localStorage.setItem('patientAuth', header);
 
                 setTimeout(() => {
                     renderDashboard(data.name, data.patientId, email);
@@ -560,14 +594,32 @@
 
             if (!response.ok) {
                 const text = await response.text();
-                throw new Error(text || response.statusText);
+                // Try to parse a JSON { message: '...' } body for nicer UI messages
+                let friendly = null;
+                try {
+                    const parsed = JSON.parse(text || '{}');
+                    if (parsed && parsed.message) friendly = parsed.message;
+                } catch (e) {
+                    // not JSON
+                }
+                throw new Error(friendly || text || response.statusText);
             }
 
-            if (response.status === 204) {
+            if (response.status === 204 || response.status === 200 && (response.headers.get('content-length') === '0' || response.headers.get('content-type') === null)) {
                 return null;
             }
 
-            return response.json();
+            const contentType = response.headers.get('content-type');
+            if (!contentType || contentType.indexOf('application/json') === -1) {
+                return null;
+            }
+
+            const text = await response.text();
+            if (!text) {
+                return null;
+            }
+
+            return JSON.parse(text);
         }
 
         async function handleAdminLogin(username, password, statusElement) {
@@ -598,15 +650,38 @@
         }
 
         async function fetchAppointments() {
+            const headers = { 'Content-Type': 'application/json' };
+            if (patientAuthHeader) {
+                headers.Authorization = patientAuthHeader;
+            }
+
             const response = await fetch(APPOINTMENTS_URL, {
                 method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json'
-                }
+                headers
             });
 
             if (!response.ok) {
-                throw new Error('Unable to load appointments');
+                // Try to include server error body for easier debugging
+                let bodyText = '';
+                try { bodyText = await response.text(); } catch (e) { /* ignore */ }
+                const statusMsg = `Unable to load appointments (${response.status}${bodyText ? `: ${bodyText}` : ''})`;
+                // If unauthorized, clear stored patient auth so user can re-authenticate
+                if (response.status === 401 || response.status === 403) {
+                    localStorage.removeItem('authType');
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('patientId');
+                    localStorage.removeItem('patientName');
+                    localStorage.removeItem('patientEmail');
+                    localStorage.removeItem('patientAuth');
+                    patientAuthHeader = null;
+                }
+                throw new Error(statusMsg);
+            }
+
+            // If response has no content (edge cases), return empty array
+            const contentType = response.headers.get('content-type') || '';
+            if (response.status === 204 || contentType.indexOf('application/json') === -1) {
+                return [];
             }
 
             return response.json();
@@ -614,13 +689,34 @@
 
         async function scheduleAppointment(patientId) {
             const timeInput = document.getElementById('appointment-time');
+            const reasonInput = document.getElementById('appointment-reason');
             const statusBox = document.getElementById('appointment-status');
             const button = document.getElementById('appointment-submit');
 
             const scheduledAt = timeInput.value;
+            const reason = reasonInput ? reasonInput.value.trim() : '';
 
             if (!scheduledAt) {
                 statusBox.textContent = 'Please choose a date and time for the appointment.';
+                statusBox.className = 'message error';
+                return;
+            }
+
+            // Prevent booking on weekends (Saturday = 6, Sunday = 0 for getDay())
+            try {
+                const dt = new Date(scheduledAt);
+                const day = dt.getDay();
+                if (day === 0 || day === 6) {
+                    statusBox.textContent = 'Clinic is closed on weekends. Please select a weekday.';
+                    statusBox.className = 'message error';
+                    return;
+                }
+            } catch (e) {
+                // ignore parse error, backend will validate
+            }
+
+            if (!reason) {
+                statusBox.textContent = 'Please provide a reason for the visit.';
                 statusBox.className = 'message error';
                 return;
             }
@@ -638,7 +734,8 @@
                     },
                     body: JSON.stringify({
                         patientId: Number(patientId),
-                        scheduledAt
+                        scheduledAt,
+                        reason
                     })
                 });
 
@@ -651,6 +748,7 @@
                 statusBox.textContent = `Appointment request submitted for ${escapeHtml(formatDate(appointment.scheduledAt))}. An admin will confirm it soon.`;
                 statusBox.className = 'message success';
                 timeInput.value = '';
+                if (reasonInput) reasonInput.value = '';
             } catch (error) {
                 statusBox.textContent = error.message;
                 statusBox.className = 'message error';
@@ -716,8 +814,98 @@
                 const appointments = await fetchAppointments();
                 renderAppointments(appointments, patientId);
             } catch (error) {
-                container.innerHTML = `<p class="message error">${escapeHtml(error.message)}</p>`;
+                const msg = error && error.message ? error.message : 'Unable to load appointments';
+                container.innerHTML = `<p class="message error">${escapeHtml(msg)}</p>`;
+                // If unauthorized, show auth page to let user re-login
+                if (msg.indexOf('401') !== -1 || msg.indexOf('403') !== -1) {
+                    const root = document.getElementById('root');
+                    setTimeout(() => {
+                        renderAuthPage(root);
+                        // show a clear status on the login section
+                        const loginStatus = document.getElementById('login-status');
+                        if (loginStatus) {
+                            loginStatus.textContent = 'Session expired or not authenticated. Please log in again.';
+                            loginStatus.className = 'message error';
+                        }
+                    }, 1200);
+                }
             }
+        }
+
+        function showBrowserNotification(title, body) {
+            try {
+                if (!('Notification' in window)) return;
+                if (Notification.permission === 'granted') {
+                    new Notification(title, { body });
+                } else if (Notification.permission !== 'denied') {
+                    Notification.requestPermission().then(permission => {
+                        if (permission === 'granted') {
+                            new Notification(title, { body });
+                        }
+                    });
+                }
+            } catch (e) {
+                // Ignore notification errors
+            }
+        }
+
+        function startPatientPoll(patientId, intervalMs = 15000) {
+            // Clear any existing poll
+            stopPatientPoll();
+            // Initialize last-known map
+            lastPatientAppointments = {};
+
+            const check = async () => {
+                try {
+                    const appointments = await fetchAppointments();
+                    const patientString = String(patientId);
+                    const patientAppointments = appointments.filter(app => String(app.patientId) === patientString);
+
+                    // Build current map
+                    const current = {};
+                    patientAppointments.forEach(app => {
+                        current[app.id] = (app.status || 'PENDING').toUpperCase();
+                    });
+
+                    // Compare and notify on transitions (e.g., PENDING -> CONFIRMED)
+                    for (const app of patientAppointments) {
+                        const id = app.id;
+                        const status = (app.status || 'PENDING').toUpperCase();
+                        const prev = lastPatientAppointments[id];
+                        if (prev && prev !== status) {
+                            // Notify user about a status change
+                            const msg = `Appointment ${id} status changed to ${status}`;
+                            const statusEl = document.getElementById('appointment-status');
+                            if (statusEl) {
+                                statusEl.textContent = msg;
+                                statusEl.className = 'message success';
+                            }
+                            // Browser notification
+                            showBrowserNotification('Appointment update', `${app.patientName}: ${status} on ${formatDate(app.scheduledAt)}`);
+                        }
+                    }
+
+                    // Update last-known map
+                    lastPatientAppointments = current;
+
+                    // Update UI
+                    renderAppointments(appointments, patientId);
+                } catch (err) {
+                    // ignore poll errors
+                }
+            };
+
+            // Run immediately and then at interval
+            check();
+            patientPollInterval = setInterval(check, intervalMs);
+        }
+
+        function stopPatientPoll() {
+            if (patientPollInterval) {
+                clearInterval(patientPollInterval);
+                patientPollInterval = null;
+            }
+            lastPatientAppointments = {};
         }
 
         async function fetchAdminPatients(search = '') {
@@ -779,14 +967,27 @@
                 return;
             }
 
-            const rows = appointments.map(app => `
+            const rows = appointments.map(app => {
+                const status = String(app.status || 'PENDING').toUpperCase();
+                const isActionable = status === 'PENDING';
+                const confirmLabel = status === 'CONFIRMED' ? 'Confirmed' : 'Confirm';
+
+                return `
                 <tr>
                     <td>${escapeHtml(String(app.id))}</td>
                     <td>${escapeHtml(app.patientName)}</td>
                     <td>${escapeHtml(app.reason || '—')}</td>
                     <td>${escapeHtml(formatDate(app.scheduledAt))}</td>
+                    <td>${escapeHtml(status)}</td>
+                    <td>
+                        <div class="actions">
+                            <button class="confirm-btn" data-id="${escapeHtml(String(app.id))}" ${isActionable ? '' : 'disabled'}>${escapeHtml(confirmLabel)}</button>
+                            <button class="delete-btn" data-id="${escapeHtml(String(app.id))}">Delete</button>
+                        </div>
+                    </td>
                 </tr>
-            `).join('');
+            `;
+            }).join('');
 
             container.innerHTML = `
                 <div class="table-wrapper">
@@ -797,6 +998,8 @@
                                 <th>Patient</th>
                                 <th>Reason</th>
                                 <th>Scheduled At</th>
+                                <th>Status</th>
+                                <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -805,6 +1008,48 @@
                     </table>
                 </div>
             `;
+
+            // Attach event listeners for confirm/delete buttons
+            container.querySelectorAll('.confirm-btn').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    const id = btn.dataset.id;
+                    const statusEl = document.getElementById('dashboard-status');
+                    try {
+                        btn.disabled = true;
+                        statusEl.textContent = `Confirming appointment ${id}...`;
+                        statusEl.className = 'message';
+                        await fetchAdminApi(`/appointments/${id}/confirm`, { method: 'PUT' });
+                        statusEl.textContent = `Appointment ${id} confirmed.`;
+                        statusEl.className = 'message success';
+                        await loadAdminData();
+                    } catch (err) {
+                        statusEl.textContent = err.message || String(err);
+                        statusEl.className = 'message error';
+                        btn.disabled = false;
+                    }
+                });
+            });
+
+            container.querySelectorAll('.delete-btn').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    const id = btn.dataset.id;
+                    const statusEl = document.getElementById('dashboard-status');
+                    if (!confirm(`Delete appointment ${id}? This action cannot be undone.`)) return;
+                    try {
+                        btn.disabled = true;
+                        statusEl.textContent = `Deleting appointment ${id}...`;
+                        statusEl.className = 'message';
+                        await fetchAdminApi(`/appointments/${id}`, { method: 'DELETE' });
+                        statusEl.textContent = `Appointment ${id} deleted.`;
+                        statusEl.className = 'message success';
+                        await loadAdminData();
+                    } catch (err) {
+                        statusEl.textContent = err.message || String(err);
+                        statusEl.className = 'message error';
+                        btn.disabled = false;
+                    }
+                });
+            });
         }
 
         async function loadAdminData(search = '') {
@@ -841,9 +1086,17 @@
                             Date & time
                             <input type="datetime-local" id="appointment-time" required />
                         </label>
+                        <label>
+                            Reason
+                            <textarea id="appointment-reason" placeholder="Reason for visit (required)"></textarea>
+                        </label>
                         <button type="button" id="appointment-submit">Request Appointment</button>
                         <div id="appointment-status"></div>
                     </div>
+                    <section class="table-section">
+                        <div class="section-title">Your Appointments</div>
+                        <div id="appointments-container"></div>
+                    </section>
                     <div class="card-panel">
                         <h2>Next steps</h2>
                         <p>You can use this dashboard to review your appointment details and log out when finished.</p>
@@ -855,6 +1108,11 @@
             root.querySelector('#appointment-submit').addEventListener('click', () => {
                 scheduleAppointment(patientId);
             });
+            // initialize enhanced datepicker (disables weekends)
+            initDatePickers();
+            // Load appointments and start polling for status changes
+            loadPatientAppointments(patientId);
+            startPatientPoll(patientId);
 
             root.querySelector('#logout-button').addEventListener('click', () => {
                 localStorage.removeItem('authType');
@@ -862,6 +1120,9 @@
                 localStorage.removeItem('patientId');
                 localStorage.removeItem('patientName');
                 localStorage.removeItem('patientEmail');
+                stopPatientPoll();
+                localStorage.removeItem('patientAuth');
+                patientAuthHeader = null;
                 renderAuthPage(root);
             });
         }
@@ -873,43 +1134,6 @@
                     <div class="section-title">Admin Dashboard</div>
                     <p class="helper-text">Welcome back, ${escapeHtml(username)}. Manage patients and appointments from here.</p>
                     <div class="card-grid">
-                        <div class="card-panel">
-                            <h2>Search patients</h2>
-                            <form id="admin-search-form">
-                                <label>
-                                    Search by name, phone, or email
-                                    <input id="admin-patient-search" type="search" placeholder="Search patients..." />
-                                </label>
-                                <button type="submit">Search</button>
-                            </form>
-                        </div>
-                        <div class="card-panel">
-                            <h2>Create admin user</h2>
-                            <form id="admin-create-form">
-                                <label>
-                                    Full Name
-                                    <input type="text" id="admin-create-name" required />
-                                </label>
-                                <label>
-                                    Email
-                                    <input type="email" id="admin-create-email" required />
-                                </label>
-                                <label>
-                                    Phone
-                                    <input type="text" id="admin-create-phone" required />
-                                </label>
-                                <label>
-                                    Password
-                                    <input type="password" id="admin-create-password" required />
-                                </label>
-                                <label>
-                                    Confirm Password
-                                    <input type="password" id="admin-create-confirm-password" required />
-                                </label>
-                                <button type="submit">Create Admin</button>
-                            </form>
-                            <div id="admin-create-status"></div>
-                        </div>
                         <div class="card-panel">
                             <h2>Schedule appointment</h2>
                             <form id="admin-appointment-form">
@@ -953,14 +1177,10 @@
                 }
             });
 
-            const searchForm = root.querySelector('#admin-search-form');
-            const appointmentForm = root.querySelector('#admin-appointment-form');
+            // initialize enhanced datepicker (disables weekends) for admin appointment form
+            initDatePickers();
 
-            searchForm.addEventListener('submit', async event => {
-                event.preventDefault();
-                const searchValue = root.querySelector('#admin-patient-search').value.trim();
-                await loadAdminData(searchValue);
-            });
+            const appointmentForm = root.querySelector('#admin-appointment-form');
 
             appointmentForm.addEventListener('submit', async event => {
                 event.preventDefault();
@@ -968,13 +1188,6 @@
                 await scheduleAdminAppointment(patientId);
             });
 
-            const adminCreateForm = root.querySelector('#admin-create-form');
-            if (adminCreateForm) {
-                adminCreateForm.addEventListener('submit', async event => {
-                    event.preventDefault();
-                    await createAdminUser();
-                });
-            }
 
             root.querySelector('#logout-button').addEventListener('click', () => {
                 localStorage.removeItem('authType');
@@ -989,6 +1202,7 @@
             const timeInput = document.getElementById('appointment-time');
             const statusBox = document.getElementById('appointment-status');
             const button = document.getElementById('appointment-submit');
+            const reasonInput = document.getElementById('appointment-reason');
 
             const scheduledAt = timeInput.value;
 
@@ -998,17 +1212,32 @@
                 return;
             }
 
+            // Prevent booking on weekends for admin-created appointments as well
+            try {
+                const dt = new Date(scheduledAt);
+                const day = dt.getDay();
+                if (day === 0 || day === 6) {
+                    statusBox.textContent = 'Clinic is closed on weekends. Please select a weekday.';
+                    statusBox.className = 'message error';
+                    return;
+                }
+            } catch (e) {
+                // ignore parse error; backend will validate
+            }
+
             button.disabled = true;
             button.textContent = 'Creating...';
             statusBox.textContent = 'Scheduling appointment...';
             statusBox.className = 'message';
 
             try {
+                const reason = reasonInput ? reasonInput.value.trim() : '';
                 const response = await fetchAdminApi('/appointments', {
                     method: 'POST',
                     body: JSON.stringify({
                         patientId: Number(patientId),
-                        scheduledAt
+                        scheduledAt,
+                        reason
                     })
                 });
 
@@ -1025,42 +1254,6 @@
             }
         }
 
-        async function createAdminUser() {
-            const statusBox = document.getElementById('admin-create-status');
-            const name = document.getElementById('admin-create-name').value.trim();
-            const email = document.getElementById('admin-create-email').value.trim();
-            const phone = document.getElementById('admin-create-phone').value.trim();
-            const password = document.getElementById('admin-create-password').value.trim();
-            const confirmPassword = document.getElementById('admin-create-confirm-password').value.trim();
-
-            if (password !== confirmPassword) {
-                statusBox.textContent = 'Passwords do not match';
-                statusBox.className = 'message error';
-                return;
-            }
-
-            statusBox.textContent = 'Creating admin account...';
-            statusBox.className = 'message';
-
-            try {
-                await fetchAdminApi('/admins', {
-                    method: 'POST',
-                    body: JSON.stringify({
-                        name,
-                        email,
-                        phone,
-                        password
-                    })
-                });
-
-                statusBox.textContent = `Admin account ${escapeHtml(email)} created.`;
-                statusBox.className = 'message success';
-                document.getElementById('admin-create-form').reset();
-            } catch (error) {
-                statusBox.textContent = error.message;
-                statusBox.className = 'message error';
-            }
-        }
 
         // Initialize on page load
         document.addEventListener('DOMContentLoaded', () => {
@@ -1072,6 +1265,11 @@
             const patientName = localStorage.getItem('patientName');
             const patientId = localStorage.getItem('patientId');
             const patientEmail = localStorage.getItem('patientEmail');
+            const storedPatientAuth = localStorage.getItem('patientAuth');
+
+            if (storedPatientAuth) {
+                patientAuthHeader = storedPatientAuth;
+            }
 
             if (authType === 'admin' && adminName && storedAdminAuth) {
                 adminAuthHeader = storedAdminAuth;

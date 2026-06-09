@@ -33,6 +33,9 @@ public class Patient {
     @Column(columnDefinition = "TEXT")
     private String notes;
 
+    @Column(name = "sms_opt_in", nullable = false)
+    private Boolean smsOptIn = false;
+
     @Column(nullable = false)
     private String role = "PATIENT";
 
@@ -92,6 +95,14 @@ public class Patient {
 
     public void setNotes(String notes) {
         this.notes = notes;
+    }
+
+    public Boolean getSmsOptIn() {
+        return smsOptIn;
+    }
+
+    public void setSmsOptIn(Boolean smsOptIn) {
+        this.smsOptIn = smsOptIn;
     }
 
     public String getRole() {

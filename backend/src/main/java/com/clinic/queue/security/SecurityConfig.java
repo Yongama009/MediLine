@@ -17,13 +17,16 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import java.util.List;
 
 import static org.springframework.security.config.Customizer.withDefaults;
+import org.springframework.security.web.AuthenticationEntryPoint;
+import org.springframework.security.web.access.AccessDeniedHandler;
 
 @Configuration
 public class SecurityConfig {
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http, PatientAuthenticationProvider patientAuthenticationProvider) throws Exception {
         http
+                .authenticationProvider(patientAuthenticationProvider)
                 .csrf(csrf -> csrf.disable())
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .authorizeHttpRequests(auth -> auth
@@ -43,7 +46,11 @@ public class SecurityConfig {
                         .requestMatchers("/api/admins/**").hasRole("ADMIN")
                         .requestMatchers("/api/**").authenticated()
                         .anyRequest().permitAll())
-                .httpBasic(withDefaults());
+                        .exceptionHandling(ex -> ex
+                                .authenticationEntryPoint(new RestAuthenticationEntryPoint())
+                                .accessDeniedHandler(new RestAccessDeniedHandler())
+                        )
+                        .httpBasic(withDefaults());
         return http.build();
     }
 
@@ -61,32 +68,19 @@ public class SecurityConfig {
 
     @Bean
     public UserDetailsService userDetailsService(PatientRepository patientRepository) {
-        return username -> patientRepository.findByEmail(username)
-                .map(patient -> User.withUsername(patient.getEmail())
-                        .password(patient.getPassword())
-                        .roles(patient.getRole() == null ? "PATIENT" : patient.getRole())
-                        .build())
-                .orElseThrow(() -> new UsernameNotFoundException("User not found: " + username));
+        return username -> {
+            String email = username == null ? null : username.trim();
+            return patientRepository.findByEmailIgnoreCase(email)
+                    .map(patient -> User.withUsername(patient.getEmail())
+                            .password(patient.getPassword())
+                            .roles(patient.getRole() == null ? "PATIENT" : patient.getRole())
+                            .build())
+                    .orElseThrow(() -> new UsernameNotFoundException("User not found: " + username));
+        };
     }
 
     @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new PasswordEncoder() {
-            @Override
-            public String encode(CharSequence rawPassword) {
-                return rawPassword == null ? null : rawPassword.toString();
-            }
-
-            @Override
-            public boolean matches(CharSequence rawPassword, String encodedPassword) {
-                if (rawPassword == null && encodedPassword == null) {
-                    return true;
-                }
-                if (rawPassword == null || encodedPassword == null) {
-                    return false;
-                }
-                return encodedPassword.equals(rawPassword.toString());
-            }
-        };
+    public org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder passwordEncoder() {
+        return new org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder();
     }
 }
