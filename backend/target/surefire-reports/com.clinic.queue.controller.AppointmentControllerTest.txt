@@ -1,4 +1,0 @@
--------------------------------------------------------------------------------
-Test set: com.clinic.queue.controller.AppointmentControllerTest
--------------------------------------------------------------------------------
-Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 10.96 s -- in com.clinic.queue.controller.AppointmentControllerTest

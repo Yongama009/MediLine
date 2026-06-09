@@ -8,19 +8,16 @@ public class PatientRequest {
     @NotBlank(message = "Name is required")
     private String name;
 
-    @NotBlank(message = "Email is required")
-    @Email(message = "Email should be valid")
+    @Email(message = "Email should be valid") // Removed NotBlank to allow partial updates
     private String email;
 
-    @NotBlank(message = "Phone number is required")
     private String phone;
-
-    @NotBlank(message = "Password is required")
     private String password;
 
     private String role;
     private String notes;
     private String adminCode; // Required only when registering as ADMIN
+    private Boolean smsOptIn;
 
     public String getName() {
         return name;
@@ -76,5 +73,13 @@ public class PatientRequest {
 
     public void setAdminCode(String adminCode) {
         this.adminCode = adminCode;
+    }
+
+    public Boolean getSmsOptIn() {
+        return smsOptIn;
+    }
+
+    public void setSmsOptIn(Boolean smsOptIn) {
+        this.smsOptIn = smsOptIn;
     }
 }

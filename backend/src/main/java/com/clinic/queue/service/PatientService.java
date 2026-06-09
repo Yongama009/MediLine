@@ -13,11 +13,13 @@ import java.util.List;
 public class PatientService {
 
     private final PatientRepository patientRepository;
+    private final org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
     @Value("${admin.registration.code:ADMIN_SECRET_2024}")
     private String adminRegistrationCode;
 
-    public PatientService(PatientRepository patientRepository) {
+    public PatientService(PatientRepository patientRepository, org.springframework.security.crypto.password.PasswordEncoder passwordEncoder) {
         this.patientRepository = patientRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     public Patient registerPatient(PatientRequest request) {
@@ -79,10 +81,24 @@ public class PatientService {
     }
 
     private void applyPatientChanges(Patient patient, PatientRequest request) {
-        patient.setName(request.getName() != null ? request.getName().trim() : null);
-        patient.setEmail(request.getEmail() != null ? request.getEmail().trim() : null);
-        patient.setPhone(request.getPhone() != null ? request.getPhone().trim() : null);
-        patient.setPassword(request.getPassword());
-        patient.setNotes(request.getNotes() == null ? null : request.getNotes().trim());
+        if (request.getName() != null)
+            patient.setName(request.getName().trim());
+        if (request.getEmail() != null)
+            patient.setEmail(request.getEmail().trim());
+        if (request.getPhone() != null)
+            patient.setPhone(request.getPhone().trim());
+        if (request.getSmsOptIn() != null) {
+            patient.setSmsOptIn(request.getSmsOptIn());
+        }
+        if (request.getPassword() != null) {
+            // encode password using configured encoder (BCrypt)
+            patient.setPassword(passwordEncoder.encode(request.getPassword()));
+        }
+
+        // Notes can be explicitly cleared by the user, so we handle it slightly
+        // differently
+        if (request.getNotes() != null) {
+            patient.setNotes(request.getNotes().trim());
+        }
     }
 }

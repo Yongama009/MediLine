@@ -35,7 +35,7 @@ cd frontend
 python3 -m http.server 3000
 ```
 
-Open `http://localhost:3004` in your browser.
+Open `http://localhost:3000` in your browser.
 
 > Start the backend first so the frontend can connect to `http://localhost:8080`.
 

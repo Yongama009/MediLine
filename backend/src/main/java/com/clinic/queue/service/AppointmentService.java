@@ -6,21 +6,30 @@ import com.clinic.queue.exception.ResourceNotFoundException;
 import com.clinic.queue.model.Appointment;
 import com.clinic.queue.model.Patient;
 import com.clinic.queue.repository.AppointmentRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.DayOfWeek;
+import java.time.temporal.TemporalAdjusters;
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
 public class AppointmentService {
 
+    private static final Logger log = LoggerFactory.getLogger(AppointmentService.class);
+
     private final AppointmentRepository appointmentRepository;
     private final PatientService patientService;
+    private final NotificationService notificationService;
 
-    public AppointmentService(AppointmentRepository appointmentRepository, PatientService patientService) {
+    public AppointmentService(AppointmentRepository appointmentRepository, PatientService patientService, NotificationService notificationService) {
         this.appointmentRepository = appointmentRepository;
         this.patientService = patientService;
+        this.notificationService = notificationService;
     }
 
     public AppointmentResponse scheduleAppointment(AppointmentRequest request) {
@@ -35,7 +44,33 @@ public class AppointmentService {
         if (scheduledAtStr != null && scheduledAtStr.length() == 16) {
             scheduledAtStr += ":00";
         }
-        appointment.setScheduledAt(LocalDateTime.parse(scheduledAtStr));
+        // Parse scheduled time and reject weekend dates (clinic closed on Saturday/Sunday)
+        LocalDateTime scheduledAt = LocalDateTime.parse(scheduledAtStr);
+        switch (scheduledAt.getDayOfWeek()) {
+            case SATURDAY:
+            case SUNDAY:
+                throw new IllegalArgumentException("Clinic is closed on weekends. Please choose a weekday.");
+            default:
+                break;
+        }
+        appointment.setScheduledAt(scheduledAt);
+
+        // Enforce booking frequency rules:
+        // 1) No duplicate bookings for the same patient within the same week (Mon-Sun)
+        LocalDateTime weekStart = scheduledAt.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)).with(LocalTime.MIN);
+        LocalDateTime weekEnd = scheduledAt.with(TemporalAdjusters.nextOrSame(DayOfWeek.SUNDAY)).with(LocalTime.MAX);
+        List<Appointment> sameWeek = appointmentRepository.findByPatientIdAndScheduledAtBetween(patient.getId(), weekStart, weekEnd);
+        if (!sameWeek.isEmpty()) {
+            throw new IllegalArgumentException("You already have an appointment scheduled in the same week. Please choose another date.");
+        }
+
+        // 2) Allow at most one booking per calendar month
+        LocalDateTime monthStart = scheduledAt.withDayOfMonth(1).with(LocalTime.MIN);
+        LocalDateTime monthEnd = scheduledAt.with(TemporalAdjusters.lastDayOfMonth()).with(LocalTime.MAX);
+        List<Appointment> sameMonth = appointmentRepository.findByPatientIdAndScheduledAtBetween(patient.getId(), monthStart, monthEnd);
+        if (!sameMonth.isEmpty()) {
+            throw new IllegalArgumentException("You can only book once per month. Please choose a different month.");
+        }
 
         Appointment savedAppointment = appointmentRepository.save(appointment);
         return toResponse(savedAppointment, patient.getName());
@@ -61,6 +96,14 @@ public class AppointmentService {
                 .orElseThrow(() -> new ResourceNotFoundException("Appointment not found with id: " + id));
         appointment.setStatus("CONFIRMED");
         appointmentRepository.save(appointment);
+        // notify patient that appointment is confirmed
+        try {
+            Patient patient = patientService.getPatientById(appointment.getPatientId());
+            notificationService.notifyAppointmentConfirmed(patient, toResponse(appointment, patient.getName()));
+        } catch (Exception e) {
+            // swallow notification errors to avoid failing the confirm operation but log them
+            log.error("Failed to send confirmation notification: {}", e.getMessage());
+        }
     }
 
     public void startProgress(Long id) {
@@ -90,7 +133,7 @@ public class AppointmentService {
         response.setPatientName(patientName);
         response.setReason(appointment.getReason());
         response.setScheduledAt(appointment.getScheduledAt());
-        response.setStatus(appointment.getStatus() == null ? "PENDING" : appointment.getStatus());
+        response.setStatus(appointment.getStatus() == null ? "PENDING" : appointment.getStatus().toUpperCase());
         response.setCreatedAt(appointment.getCreatedAt());
         return response;
     }

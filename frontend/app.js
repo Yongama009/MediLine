@@ -64,17 +64,15 @@ async function fetchApi(path, options = {}) {
 
     const text = await response.text();
     if (!response.ok) {
+        let errorMessage = text || response.statusText;
         try {
             const json = JSON.parse(text);
             if (typeof json === 'object' && json !== null) {
-                // Extract validation messages from Spring Boot's error response
-                const messages = Object.values(json);
-                throw new Error(messages.join('. '));
+                // Extract the specific validation messages (e.g., "Reason for visit is required")
+                errorMessage = Object.values(json).join(' ');
             }
-        } catch (e) {
-            // If parsing fails, fall back to the original text
-        }
-        throw new Error(text || response.statusText);
+        } catch (e) { /* ignore parse errors */ }
+        throw new Error(errorMessage);
     }
 
     return text ? JSON.parse(text) : null;
@@ -223,6 +221,8 @@ async function handlePatientRegistration(event) {
             body: JSON.stringify(payload)
         });
 
+        authHeader = `Basic ${btoa(`${payload.email}:${payload.password}`)}`;
+        currentUsername = payload.email;
         renderPatientDashboard(patient);
     } catch (error) {
         setStatus(error.message, 'error');
@@ -512,45 +512,39 @@ function renderPatientTable() {
         return;
     }
 
-    if (!patients || !patients.length) {
-        container.innerHTML = '<p>No patients found.</p>';
-        return;
-    }
-
-    const rows = patients
-        .map((patient) => {
-            if (editingPatientId === patient.id) {
-                return `
-                    <tr>
-                        <td>${patient.id}</td>
-                        <td><input id="edit-name-${patient.id}" value="${escapeHtml(patient.name)}" /></td>
-                        <td><input id="edit-phone-${patient.id}" value="${escapeHtml(patient.phone)}" /></td>
-                        <td><textarea id="edit-notes-${patient.id}">${escapeHtml(patient.notes || '')}</textarea></td>
-                        <td>${formatDateTime(patient.createdAt)}</td>
-                        <td class="actions">
-                            <button class="save-button" data-id="${patient.id}">Save</button>
-                            <button class="cancel-button" data-id="${patient.id}">Cancel</button>
-                        </td>
-                    </tr>
-                `;
-            }
-
+    const rows = patients.map(patient => {
+        const isEditing = editingPatientId === patient.id;
+        if (isEditing) {
             return `
                 <tr>
                     <td>${patient.id}</td>
-                    <td>${escapeHtml(patient.name)}</td>
+                    <td><input type="text" id="edit-name-${patient.id}" value="${escapeHtml(patient.name)}" /></td>
                     <td>${escapeHtml(patient.email)}</td>
-                    <td>${escapeHtml(patient.phone)}</td>
+                    <td><input type="text" id="edit-phone-${patient.id}" value="${escapeHtml(patient.phone)}" /></td>
+                    <td><input type="text" id="edit-notes-${patient.id}" value="${escapeHtml(patient.notes || '')}" /></td>
                     <td class="actions">
-                        <button class="edit-button" data-id="${patient.id}">Edit</button>
-                        <button class="delete-button" data-id="${patient.id}">Delete</button>
+                        <button class="save-button" data-id="${patient.id}">Save</button>
+                        <button class="cancel-button" data-id="${patient.id}">Cancel</button>
                     </td>
                 </tr>
             `;
-        })
-        .join('');
+        }
+        return `
+            <tr>
+                <td>${patient.id}</td>
+                <td>${escapeHtml(patient.name)}</td>
+                <td>${escapeHtml(patient.email)}</td>
+                <td>${escapeHtml(patient.phone)}</td>
+                <td>${escapeHtml(patient.notes || '')}</td>
+                <td class="actions">
+                    <button class="edit-button" data-id="${patient.id}">Edit</button>
+                    <button class="delete-button" data-id="${patient.id}">Delete</button>
+                </td>
+            </tr>
+        `;
+    }).join('');
 
-    container.innerHTML = `
+    let html = `
         <div class="table-wrapper">
             <table>
                 <thead>
@@ -559,6 +553,7 @@ function renderPatientTable() {
                         <th>Name</th>
                         <th>Email</th>
                         <th>Phone</th>
+                        <th>Notes</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
@@ -568,6 +563,8 @@ function renderPatientTable() {
             </table>
         </div>
     `;
+
+    container.innerHTML = html;
 
     container.querySelectorAll('.edit-button').forEach((button) => {
         button.addEventListener('click', (event) => {
@@ -605,18 +602,24 @@ function renderPatientTable() {
  */
 function renderAppointmentTable() {
     const container = appRoot.querySelector('#appointment-table-container');
-    if (!container) {
-        return;
-    }
+    if (!container) return;
 
     if (!appointments || !appointments.length) {
-        container.innerHTML = '<p>No appointments scheduled yet.</p>';
+        container.innerHTML = `
+            <div class="table-wrapper">
+                <table>
+                    <thead><tr><th>ID</th><th>Patient</th><th>Reason</th><th>Scheduled At</th><th>Status</th><th>Actions</th></tr></thead>
+                    <tbody><tr><td colspan="6" style="text-align:center;">No appointments scheduled yet.</td></tr></tbody>
+                </table>
+            </div>`;
         return;
     }
 
     const rows = appointments.map((appointment) => {
         const status = (appointment.status || 'PENDING').toUpperCase();
         const canConfirm = status === 'PENDING';
+        const canStart = status === 'CONFIRMED';
+        const canComplete = status === 'IN_PROGRESS';
 
         return `
             <tr>
@@ -627,6 +630,8 @@ function renderAppointmentTable() {
                 <td><span class="status-badge ${status.toLowerCase()}">${status}</span></td>
                 <td class="actions">
                     ${canConfirm ? `<button class="confirm-button" data-id="${appointment.id}">Confirm</button>` : ''}
+                    ${canStart ? `<button class="progress-button" data-id="${appointment.id}">Start</button>` : ''}
+                    ${canComplete ? `<button class="complete-button" data-id="${appointment.id}">Complete</button>` : ''}
                     <button class="delete-app-button danger" data-id="${appointment.id}">Delete</button>
                 </td>
             </tr>
