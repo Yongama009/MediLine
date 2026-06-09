@@ -79,9 +79,9 @@ public class PatientService {
     }
 
     private void applyPatientChanges(Patient patient, PatientRequest request) {
-        patient.setName(request.getName().trim());
-        patient.setEmail(request.getEmail().trim());
-        patient.setPhone(request.getPhone().trim());
+        patient.setName(request.getName() != null ? request.getName().trim() : null);
+        patient.setEmail(request.getEmail() != null ? request.getEmail().trim() : null);
+        patient.setPhone(request.getPhone() != null ? request.getPhone().trim() : null);
         patient.setPassword(request.getPassword());
         patient.setNotes(request.getNotes() == null ? null : request.getNotes().trim());
     }

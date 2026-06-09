@@ -1,3 +1,4 @@
+
 package com.clinic.queue.model;
 
 import jakarta.persistence.Column;
@@ -30,10 +31,16 @@ public class Appointment {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    @Column(name = "status", nullable = false)
+    private String status = "PENDING";
+
     @PrePersist
     public void prePersist() {
         if (createdAt == null) {
             createdAt = LocalDateTime.now();
+        }
+        if (status == null) {
+            status = "PENDING";
         }
     }
 
@@ -75,5 +82,13 @@ public class Appointment {
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
     }
 }

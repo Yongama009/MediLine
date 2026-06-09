@@ -11,6 +11,7 @@ public class AppointmentRequest {
     @NotBlank(message = "Scheduled time is required")
     private String scheduledAt;
 
+    @NotBlank(message = "Reason for visit is required")
     private String reason;
 
     public Long getPatientId() {

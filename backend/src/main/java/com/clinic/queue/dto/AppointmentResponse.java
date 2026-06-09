@@ -8,6 +8,7 @@ public class AppointmentResponse {
     private Long patientId;
     private String patientName;
     private String reason;
+    private String status;
     private LocalDateTime scheduledAt;
     private LocalDateTime createdAt;
 
@@ -41,6 +42,14 @@ public class AppointmentResponse {
 
     public void setReason(String reason) {
         this.reason = reason;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
     }
 
     public LocalDateTime getScheduledAt() {

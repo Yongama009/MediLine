@@ -2,6 +2,7 @@ package com.clinic.queue.service;
 
 import com.clinic.queue.dto.AppointmentRequest;
 import com.clinic.queue.dto.AppointmentResponse;
+import com.clinic.queue.exception.ResourceNotFoundException;
 import com.clinic.queue.model.Appointment;
 import com.clinic.queue.model.Patient;
 import com.clinic.queue.repository.AppointmentRepository;
@@ -28,7 +29,13 @@ public class AppointmentService {
         Appointment appointment = new Appointment();
         appointment.setPatientId(patient.getId());
         appointment.setReason(request.getReason() == null ? null : request.getReason().trim());
-        appointment.setScheduledAt(LocalDateTime.parse(request.getScheduledAt()));
+        appointment.setStatus("PENDING");
+
+        String scheduledAtStr = request.getScheduledAt();
+        if (scheduledAtStr != null && scheduledAtStr.length() == 16) {
+            scheduledAtStr += ":00";
+        }
+        appointment.setScheduledAt(LocalDateTime.parse(scheduledAtStr));
 
         Appointment savedAppointment = appointmentRepository.save(appointment);
         return toResponse(savedAppointment, patient.getName());
@@ -37,10 +44,43 @@ public class AppointmentService {
     public List<AppointmentResponse> getAllAppointments() {
         return appointmentRepository.findAllByOrderByScheduledAtAsc().stream()
                 .map(appointment -> {
-                    Patient patient = patientService.getPatientById(appointment.getPatientId());
-                    return toResponse(appointment, patient.getName());
+                    String patientName = "Unknown Patient";
+                    try {
+                        Patient patient = patientService.getPatientById(appointment.getPatientId());
+                        patientName = patient.getName();
+                    } catch (ResourceNotFoundException e) {
+                        // Patient record might have been removed
+                    }
+                    return toResponse(appointment, patientName);
                 })
                 .collect(Collectors.toList());
+    }
+
+    public void confirmAppointment(Long id) {
+        Appointment appointment = appointmentRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Appointment not found with id: " + id));
+        appointment.setStatus("CONFIRMED");
+        appointmentRepository.save(appointment);
+    }
+
+    public void startProgress(Long id) {
+        Appointment appointment = appointmentRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Appointment not found with id: " + id));
+        appointment.setStatus("IN_PROGRESS");
+        appointmentRepository.save(appointment);
+    }
+
+    public void completeAppointment(Long id) {
+        Appointment appointment = appointmentRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Appointment not found with id: " + id));
+        appointment.setStatus("COMPLETED");
+        appointmentRepository.save(appointment);
+    }
+
+    public void deleteAppointment(Long id) {
+        Appointment appointment = appointmentRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Appointment not found with id: " + id));
+        appointmentRepository.delete(appointment);
     }
 
     private AppointmentResponse toResponse(Appointment appointment, String patientName) {
@@ -50,6 +90,7 @@ public class AppointmentService {
         response.setPatientName(patientName);
         response.setReason(appointment.getReason());
         response.setScheduledAt(appointment.getScheduledAt());
+        response.setStatus(appointment.getStatus() == null ? "PENDING" : appointment.getStatus());
         response.setCreatedAt(appointment.getCreatedAt());
         return response;
     }

@@ -1,18 +1,35 @@
 const API_BASE = 'http://localhost:8080/api';
+/** @type {string | null} */
 let authHeader = null;
+/** @type {string | null} */
 let currentUsername = null;
+/** @type {string} */
 let currentRole = 'nurse';
+/** @type {any[]} */
 let patients = [];
+/** @type {any[]} */
 let appointments = [];
+/** @type {string} */
 let patientSearch = '';
+/** @type {number | null} */
 let editingPatientId = null;
+/** @type {HTMLElement | null} */
 let appRoot = null;
 
+/**
+ * Initializes and renders the application into the root element.
+ * @param {HTMLElement} root 
+ */
 export function renderApp(root) {
     appRoot = root;
     renderLanding();
 }
 
+/**
+ * Builds the headers for API requests.
+ * @param {RequestInit} [options] 
+ * @returns {Record<string, string>}
+ */
 function buildHeaders(options = {}) {
     const headers = {
         ...(options.headers || {})
@@ -29,24 +46,45 @@ function buildHeaders(options = {}) {
     return headers;
 }
 
+/**
+ * Helper to fetch data from the API.
+ * @param {string} path 
+ * @param {RequestInit} [options] 
+ * @returns {Promise<any>}
+ */
 async function fetchApi(path, options = {}) {
     const response = await fetch(`${API_BASE}${path}`, {
         ...options,
         headers: buildHeaders(options)
     });
 
-    if (!response.ok) {
-        const text = await response.text();
-        throw new Error(text || response.statusText);
-    }
-
-    if (response.status === 204) {
+    if (response.status === 204 || response.status === 205) {
         return null;
     }
 
-    return response.json();
+    const text = await response.text();
+    if (!response.ok) {
+        try {
+            const json = JSON.parse(text);
+            if (typeof json === 'object' && json !== null) {
+                // Extract validation messages from Spring Boot's error response
+                const messages = Object.values(json);
+                throw new Error(messages.join('. '));
+            }
+        } catch (e) {
+            // If parsing fails, fall back to the original text
+        }
+        throw new Error(text || response.statusText);
+    }
+
+    return text ? JSON.parse(text) : null;
 }
 
+/**
+ * Sets the status message on the dashboard.
+ * @param {string} text - The message to display.
+ * @param {string} [type] - The type of message (e.g., 'error', 'success').
+ */
 function setStatus(text, type = '') {
     const status = appRoot.querySelector('#status') || appRoot.querySelector('#dashboard-status');
     if (!status) {
@@ -56,6 +94,11 @@ function setStatus(text, type = '') {
     status.className = type ? `message ${type}` : 'message';
 }
 
+/**
+ * Escapes HTML characters to prevent XSS.
+ * @param {any} value 
+ * @returns {string}
+ */
 function escapeHtml(value) {
     return String(value)
         .replace(/&/g, '&amp;')
@@ -86,8 +129,16 @@ function renderLanding() {
                     <input type="text" id="name" required placeholder="John Doe" />
                 </label>
                 <label>
+                    Email
+                    <input type="email" id="email" required placeholder="john@example.com" />
+                </label>
+                <label>
                     Phone number
                     <input type="text" id="phone" required placeholder="(555) 123-4567" />
+                </label>
+                <label>
+                    Password
+                    <input type="password" id="reg-password" required placeholder="••••••••" />
                 </label>
                 <label>
                     Notes
@@ -147,11 +198,17 @@ function attachLandingListeners() {
     appRoot.querySelector('#admin-form').addEventListener('submit', handleAdminLogin);
 }
 
+/**
+ * Handles new patient registration.
+ * @param {SubmitEvent} event 
+ */
 async function handlePatientRegistration(event) {
     event.preventDefault();
     const payload = {
         name: appRoot.querySelector('#name').value.trim(),
+        email: appRoot.querySelector('#email').value.trim(),
         phone: appRoot.querySelector('#phone').value.trim(),
+        password: appRoot.querySelector('#reg-password').value,
         notes: appRoot.querySelector('#notes').value.trim()
     };
 
@@ -161,22 +218,12 @@ async function handlePatientRegistration(event) {
     setStatus('Saving patient record...', '');
 
     try {
-        const response = await fetch(`${API_BASE}/patients`, {
+        const patient = await fetchApi('/patients', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
             body: JSON.stringify(payload)
         });
 
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(errorText || 'Unable to register patient');
-        }
-
-        const patient = await response.json();
-        setStatus(`Patient registered successfully. ID #${patient.id}`, 'success');
-        appRoot.querySelector('#patient-form').reset();
+        renderPatientDashboard(patient);
     } catch (error) {
         setStatus(error.message, 'error');
     } finally {
@@ -185,6 +232,10 @@ async function handlePatientRegistration(event) {
     }
 }
 
+/**
+ * Handles admin login validation.
+ * @param {SubmitEvent} event 
+ */
 async function handleAdminLogin(event) {
     event.preventDefault();
     const username = appRoot.querySelector('#username').value.trim();
@@ -195,8 +246,7 @@ async function handleAdminLogin(event) {
     setStatus('Validating credentials...', '');
 
     try {
-        await refreshPatients();
-        await loadAppointments();
+        await Promise.all([loadAppointments(), refreshPatients()]);
         renderAdminDashboard();
         setStatus(`Signed in as ${currentRole}.`, 'success');
     } catch (error) {
@@ -206,48 +256,51 @@ async function handleAdminLogin(event) {
     }
 }
 
+/**
+ * Renders the Admin Dashboard UI.
+ */
 function renderAdminDashboard() {
     appRoot.innerHTML = `
-        <div class="section-title">Admin dashboard</div>
+        <div class="section-title">Admin Dashboard</div>
         <div class="switch-row">
-            <div>
-                <strong>Signed in as:</strong> ${escapeHtml(currentUsername)}
-            </div>
+            <div>Welcome back, <strong>${escapeHtml(currentUsername)}</strong>. Manage clinic operations below.</div>
             <button id="logout-button">Sign out</button>
         </div>
+
+        <div id="dashboard-status"></div>
 
         <section class="card-grid">
             <div class="card-panel">
                 <div class="section-title">Search patients</div>
-                <form id="search-form">
-                    <label>
-                        Search by name or phone
-                        <input id="patient-search" type="search" placeholder="Type a name or phone" value="${escapeHtml(patientSearch)}" />
-                    </label>
-                    <button type="submit">Search</button>
-                </form>
+                <div class="helper-text">Search by name, phone, or email</div>
+                <div class="search-box">
+                    <input type="text" id="patient-search-input" placeholder="Search patients..." value="${escapeHtml(patientSearch)}" />
+                    <button id="search-button">Search</button>
+                </div>
             </div>
+
             <div class="card-panel">
-                <div class="section-title">Schedule appointment</div>
-                <form id="appointment-form">
+                <div class="section-title">Schedule Appointment</div>
+                <form id="admin-appointment-form">
                     <label>
                         Patient
-                        <select id="appointment-patient" required></select>
+                        <select id="admin-patient-select" required>
+                            <option value="">Choose a patient...</option>
+                            ${patients.map(p => `<option value="${p.id}">${escapeHtml(p.name)} (${escapeHtml(p.email)})</option>`).join('')}
+                        </select>
                     </label>
                     <label>
                         Date & time
-                        <input type="datetime-local" id="appointment-time" required />
+                        <input type="datetime-local" id="admin-appointment-time" required />
                     </label>
                     <label>
                         Reason
-                        <textarea id="appointment-reason" placeholder="Brief appointment details..."></textarea>
+                        <textarea id="admin-appointment-reason" placeholder="Brief appointment details..."></textarea>
                     </label>
                     <button type="submit">Create Appointment</button>
                 </form>
             </div>
         </section>
-
-        <div id="dashboard-status"></div>
 
         <section class="table-section">
             <div class="section-title">Patients</div>
@@ -263,58 +316,203 @@ function renderAdminDashboard() {
     appRoot.querySelector('#logout-button').addEventListener('click', () => {
         authHeader = null;
         currentUsername = null;
-        patients = [];
         appointments = [];
-        patientSearch = '';
         renderLanding();
     });
 
-    appRoot.querySelector('#search-form').addEventListener('submit', async (event) => {
-        event.preventDefault();
-        patientSearch = appRoot.querySelector('#patient-search').value.trim();
+    appRoot.querySelector('#search-button').addEventListener('click', async () => {
+        patientSearch = appRoot.querySelector('#patient-search-input').value.trim();
         await refreshPatients();
-        renderPatientTable();
-        populatePatientSelect();
+        renderAdminDashboard();
     });
 
-    appRoot.querySelector('#appointment-form').addEventListener('submit', handleCreateAppointment);
-    renderPatientTable();
+    appRoot.querySelector('#admin-appointment-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const patientId = appRoot.querySelector('#admin-patient-select').value;
+        const scheduledAt = appRoot.querySelector('#admin-appointment-time').value;
+        const reason = appRoot.querySelector('#admin-appointment-reason').value.trim();
+        await handleAdminScheduleAppointment(patientId, scheduledAt, reason);
+    });
+
     renderAppointmentTable();
-    populatePatientSelect();
+    renderPatientTable();
 }
 
+/**
+ * Renders the Patient Dashboard UI.
+ * @param {any} patient 
+ */
+function renderPatientDashboard(patient) {
+    appRoot.innerHTML = `
+        <div class="section-title">Patient dashboard</div>
+        <div class="switch-row">
+            <div>
+                Welcome, <strong>${escapeHtml(patient.name)}</strong>. You can book your appointments here.
+            </div>
+            <button id="logout-button">Sign out</button>
+        </div>
+
+        <div id="dashboard-status"></div>
+
+        <section class="card-grid">
+            <div class="card-panel">
+                <div class="section-title">Schedule an appointment</div>
+                <form id="appointment-form">
+                    <label>
+                        Date & time
+                        <input type="datetime-local" id="appointment-time" required />
+                    </label>
+                    <label>
+                        Reason for visit
+                        <textarea id="appointment-reason" required placeholder="Briefly describe why you are visiting..."></textarea>
+                    </label>
+                    <button type="submit">Book Appointment</button>
+                </form>
+            </div>
+
+            <div class="card-panel">
+                <div class="section-title">Your Appointments</div>
+                <div id="patient-appointments-list">Loading your appointments...</div>
+            </div>
+        </section>
+    `;
+
+    appRoot.querySelector('#logout-button').addEventListener('click', () => {
+        authHeader = null;
+        currentUsername = null;
+        renderLanding();
+    });
+
+    appRoot.querySelector('#appointment-form').addEventListener('submit', (e) => handleCreateAppointment(e, patient.id));
+    refreshPatientAppointments(patient.id);
+}
+
+/**
+ * Handles appointment creation for a specific patient.
+ * @param {SubmitEvent} event 
+ * @param {number} patientId 
+ */
+async function handleCreateAppointment(event, patientId) {
+    event.preventDefault();
+    const scheduledAt = appRoot.querySelector('#appointment-time').value;
+    const reason = appRoot.querySelector('#appointment-reason').value.trim();
+
+    if (!reason) {
+        setStatus('Please provide a reason for your visit.', 'error');
+        return;
+    }
+
+    if (!scheduledAt) {
+        setStatus('Please select a date and time for your appointment.', 'error');
+        return;
+    }
+
+    setStatus('Scheduling appointment...', '');
+
+    try {
+        await fetchApi('/appointments', {
+            method: 'POST',
+            body: JSON.stringify({ patientId: Number(patientId), scheduledAt, reason })
+        });
+        setStatus('Appointment scheduled successfully!', 'success');
+        appRoot.querySelector('#appointment-form').reset();
+        refreshPatientAppointments(patientId);
+    } catch (error) {
+        setStatus(error.message, 'error');
+    }
+}
+
+/**
+ * Handles appointment creation by an admin.
+ */
+async function handleAdminScheduleAppointment(patientId, scheduledAt, reason) {
+    setStatus('Scheduling appointment...', '');
+
+    try {
+        await fetchApi('/appointments', {
+            method: 'POST',
+            body: JSON.stringify({ patientId: Number(patientId), scheduledAt, reason })
+        });
+        setStatus('Appointment scheduled successfully!', 'success');
+        await loadAppointments();
+        renderAppointmentTable();
+        appRoot.querySelector('#admin-appointment-form').reset();
+    } catch (error) {
+        setStatus(error.message, 'error');
+    }
+}
+
+/**
+ * Fetches and renders appointments for a specific patient.
+ * @param {number} patientId 
+ */
+async function refreshPatientAppointments(patientId) {
+    const container = appRoot.querySelector('#patient-appointments-list');
+    if (!container) return;
+
+    try {
+        // Note: Ensure the backend allows PATIENT role to GET /api/appointments 
+        // or implement a specific /api/patients/{id}/appointments endpoint.
+        await loadAppointments();
+        const myAppointments = appointments.filter(a => Number(a.patientId) === Number(patientId));
+
+        if (myAppointments.length === 0) {
+            container.innerHTML = '<p class="helper-text">You have no appointments scheduled yet.</p>';
+            return;
+        }
+
+        container.innerHTML = `
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Date & Time</th>
+                            <th>Reason</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${myAppointments.map(app => `
+                            <tr>
+                                <td>${formatDateTime(app.scheduledAt)}</td>
+                                <td>${escapeHtml(app.reason || '')}</td>
+                                <td><span class="status-text">${app.status || 'PENDING'}</span></td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        `;
+    } catch (error) {
+        container.innerHTML = `<p class="message error">Could not load appointments: ${error.message}</p>`;
+    }
+}
+
+/**
+ * Refreshes the patient list from the backend.
+ */
 async function refreshPatients() {
     const query = patientSearch ? `?q=${encodeURIComponent(patientSearch)}` : '';
-    patients = await fetchApi(`/patients${query}`);
+    patients = await fetchApi(`/patients${query}`) || [];
 }
 
+/**
+ * Loads the appointment list from the backend.
+ */
 async function loadAppointments() {
-    appointments = await fetchApi('/appointments');
+    appointments = await fetchApi('/appointments') || [];
 }
 
-function populatePatientSelect() {
-    const select = appRoot.querySelector('#appointment-patient');
-    if (!select) {
-        return;
-    }
-
-    if (!patients.length) {
-        select.innerHTML = '<option value="">No patients available</option>';
-        return;
-    }
-
-    select.innerHTML = patients
-        .map((patient) => `<option value="${patient.id}">${escapeHtml(patient.name)} (#${patient.id})</option>`)
-        .join('');
-}
-
+/**
+ * Renders the patient management table.
+ */
 function renderPatientTable() {
     const container = appRoot.querySelector('#patient-table-container');
     if (!container) {
         return;
     }
 
-    if (!patients.length) {
+    if (!patients || !patients.length) {
         container.innerHTML = '<p>No patients found.</p>';
         return;
     }
@@ -341,9 +539,8 @@ function renderPatientTable() {
                 <tr>
                     <td>${patient.id}</td>
                     <td>${escapeHtml(patient.name)}</td>
+                    <td>${escapeHtml(patient.email)}</td>
                     <td>${escapeHtml(patient.phone)}</td>
-                    <td>${escapeHtml(patient.notes || '')}</td>
-                    <td>${formatDateTime(patient.createdAt)}</td>
                     <td class="actions">
                         <button class="edit-button" data-id="${patient.id}">Edit</button>
                         <button class="delete-button" data-id="${patient.id}">Delete</button>
@@ -360,9 +557,8 @@ function renderPatientTable() {
                     <tr>
                         <th>ID</th>
                         <th>Name</th>
+                        <th>Email</th>
                         <th>Phone</th>
-                        <th>Notes</th>
-                        <th>Created</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
@@ -375,14 +571,14 @@ function renderPatientTable() {
 
     container.querySelectorAll('.edit-button').forEach((button) => {
         button.addEventListener('click', (event) => {
-            editingPatientId = Number(event.target.dataset.id);
+            editingPatientId = Number(event.currentTarget.dataset.id);
             renderPatientTable();
         });
     });
 
     container.querySelectorAll('.delete-button').forEach((button) => {
         button.addEventListener('click', async (event) => {
-            const id = Number(event.target.dataset.id);
+            const id = Number(event.currentTarget.dataset.id);
             if (window.confirm('Delete this patient record?')) {
                 await handleDeletePatient(id);
             }
@@ -391,7 +587,7 @@ function renderPatientTable() {
 
     container.querySelectorAll('.save-button').forEach((button) => {
         button.addEventListener('click', async (event) => {
-            const id = Number(event.target.dataset.id);
+            const id = Number(event.currentTarget.dataset.id);
             await handleUpdatePatient(id);
         });
     });
@@ -404,27 +600,38 @@ function renderPatientTable() {
     });
 }
 
+/**
+ * Renders the appointment management table.
+ */
 function renderAppointmentTable() {
     const container = appRoot.querySelector('#appointment-table-container');
     if (!container) {
         return;
     }
 
-    if (!appointments.length) {
+    if (!appointments || !appointments.length) {
         container.innerHTML = '<p>No appointments scheduled yet.</p>';
         return;
     }
 
-    const rows = appointments
-        .map((appointment) => `
+    const rows = appointments.map((appointment) => {
+        const status = (appointment.status || 'PENDING').toUpperCase();
+        const canConfirm = status === 'PENDING';
+
+        return `
             <tr>
                 <td>${appointment.id}</td>
                 <td>${escapeHtml(appointment.patientName)}</td>
+                <td>${escapeHtml(appointment.reason || '—')}</td>
                 <td>${formatDateTime(appointment.scheduledAt)}</td>
-                <td>${escapeHtml(appointment.reason || '')}</td>
-                <td>${formatDateTime(appointment.createdAt)}</td>
+                <td><span class="status-badge ${status.toLowerCase()}">${status}</span></td>
+                <td class="actions">
+                    ${canConfirm ? `<button class="confirm-button" data-id="${appointment.id}">Confirm</button>` : ''}
+                    <button class="delete-app-button danger" data-id="${appointment.id}">Delete</button>
+                </td>
             </tr>
-        `)
+        `;
+    })
         .join('');
 
     container.innerHTML = `
@@ -434,9 +641,10 @@ function renderAppointmentTable() {
                     <tr>
                         <th>ID</th>
                         <th>Patient</th>
-                        <th>Appointment</th>
                         <th>Reason</th>
-                        <th>Created</th>
+                        <th>Scheduled At</th>
+                        <th>Status</th>
+                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -445,34 +653,122 @@ function renderAppointmentTable() {
             </table>
         </div>
     `;
+
+    container.querySelectorAll('.confirm-button').forEach((button) => {
+        button.addEventListener('click', async (event) => {
+            const id = Number(event.currentTarget.dataset.id);
+            await handleConfirmAppointment(id);
+        });
+    });
+
+    container.querySelectorAll('.progress-button').forEach((button) => {
+        button.addEventListener('click', async (event) => {
+            const id = Number(event.currentTarget.dataset.id);
+            await handleInProgressAppointment(id);
+        });
+    });
+
+    container.querySelectorAll('.complete-button').forEach((button) => {
+        button.addEventListener('click', async (event) => {
+            const id = Number(event.currentTarget.dataset.id);
+            await handleCompleteAppointment(id);
+        });
+    });
+
+    container.querySelectorAll('.delete-app-button').forEach((button) => {
+        button.addEventListener('click', async (event) => {
+            const id = Number(event.currentTarget.dataset.id);
+            if (window.confirm('Are you sure you want to delete this appointment?')) {
+                await handleDeleteAppointment(id);
+            }
+        });
+    });
 }
 
-async function handleCreateAppointment(event) {
-    event.preventDefault();
-    const patientId = Number(appRoot.querySelector('#appointment-patient').value);
-    const scheduledAt = appRoot.querySelector('#appointment-time').value;
-    const reason = appRoot.querySelector('#appointment-reason').value.trim();
-
-    setStatus('Scheduling appointment...', '');
+/**
+ * Confirms a pending appointment.
+ * @param {number} id 
+ */
+async function handleConfirmAppointment(id) {
+    setStatus('Confirming appointment...', '');
 
     try {
-        await fetchApi('/appointments', {
-            method: 'POST',
-            body: JSON.stringify({
-                patientId,
-                scheduledAt,
-                reason
-            })
+        await fetchApi(`/appointments/${id}/confirm`, {
+            method: 'PUT'
         });
 
         await loadAppointments();
         renderAppointmentTable();
-        setStatus('Appointment created successfully.', 'success');
+        setStatus('Appointment confirmed successfully.', 'success');
     } catch (error) {
         setStatus(error.message, 'error');
     }
 }
 
+/**
+ * Sets an appointment status to In Progress.
+ * @param {number} id 
+ */
+async function handleInProgressAppointment(id) {
+    setStatus('Updating status to In Progress...', '');
+
+    try {
+        await fetchApi(`/appointments/${id}/in-progress`, {
+            method: 'PUT'
+        });
+
+        await loadAppointments();
+        renderAppointmentTable();
+        setStatus('Appointment is now in progress.', 'success');
+    } catch (error) {
+        setStatus(error.message, 'error');
+    }
+}
+
+/**
+ * Sets an appointment status to Completed.
+ * @param {number} id 
+ */
+async function handleCompleteAppointment(id) {
+    setStatus('Completing appointment...', '');
+
+    try {
+        await fetchApi(`/appointments/${id}/complete`, {
+            method: 'PUT'
+        });
+
+        await loadAppointments();
+        renderAppointmentTable();
+        setStatus('Appointment marked as completed.', 'success');
+    } catch (error) {
+        setStatus(error.message, 'error');
+    }
+}
+
+/**
+ * Deletes an appointment.
+ * @param {number} id 
+ */
+async function handleDeleteAppointment(id) {
+    setStatus('Deleting appointment...', '');
+
+    try {
+        await fetchApi(`/appointments/${id}`, {
+            method: 'DELETE'
+        });
+
+        await loadAppointments();
+        renderAppointmentTable();
+        setStatus('Appointment deleted successfully.', 'success');
+    } catch (error) {
+        setStatus(error.message, 'error');
+    }
+}
+
+/**
+ * Updates an existing patient record.
+ * @param {number} id 
+ */
 async function handleUpdatePatient(id) {
     const name = appRoot.querySelector(`#edit-name-${id}`).value.trim();
     const phone = appRoot.querySelector(`#edit-phone-${id}`).value.trim();
@@ -495,6 +791,10 @@ async function handleUpdatePatient(id) {
     }
 }
 
+/**
+ * Deletes a patient record.
+ * @param {number} id 
+ */
 async function handleDeletePatient(id) {
     setStatus('Deleting patient...', '');
 
@@ -513,6 +813,11 @@ async function handleDeletePatient(id) {
     }
 }
 
+/**
+ * Formats a date string for display.
+ * @param {string | number | Date} value 
+ * @returns {string}
+ */
 function formatDateTime(value) {
     if (!value) {
         return '';
@@ -520,6 +825,7 @@ function formatDateTime(value) {
 
     const date = new Date(value);
     return date.toLocaleString([], {
+        weekday: 'short',
         year: 'numeric',
         month: 'short',
         day: 'numeric',
