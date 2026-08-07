@@ -21,8 +21,8 @@ mysql -u root -p -e "CREATE DATABASE IF NOT EXISTS mediline;"
 
 ```bash
 export DB_URL='jdbc:mysql://localhost:3306/mediline?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC'
-export DB_USERNAME=root
-export DB_PASSWORD=''
+export DB_USERNAME=mediline
+export DB_PASSWORD=mediline
 ```
 
 3. Open a terminal in the `backend` folder.
