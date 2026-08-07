@@ -24,7 +24,8 @@ import org.springframework.security.web.access.AccessDeniedHandler;
 public class SecurityConfig {
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http, PatientAuthenticationProvider patientAuthenticationProvider) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http,
+            PatientAuthenticationProvider patientAuthenticationProvider) throws Exception {
         http
                 .authenticationProvider(patientAuthenticationProvider)
                 .csrf(csrf -> csrf.disable())
@@ -46,11 +47,10 @@ public class SecurityConfig {
                         .requestMatchers("/api/admins/**").hasRole("ADMIN")
                         .requestMatchers("/api/**").authenticated()
                         .anyRequest().permitAll())
-                        .exceptionHandling(ex -> ex
-                                .authenticationEntryPoint(new RestAuthenticationEntryPoint())
-                                .accessDeniedHandler(new RestAccessDeniedHandler())
-                        )
-                        .httpBasic(withDefaults());
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint(new RestAuthenticationEntryPoint())
+                        .accessDeniedHandler(new RestAccessDeniedHandler()))
+                .httpBasic(httpBasic -> httpBasic.authenticationEntryPoint(new RestAuthenticationEntryPoint()));
         return http.build();
     }
 

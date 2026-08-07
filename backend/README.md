@@ -4,25 +4,25 @@ This folder contains the backend application scaffold.
 
 ## Run locally
 
-1. Start PostgreSQL locally and ensure a database named `mediline` exists.
-   - If PostgreSQL is installed as a local service, start it with:
+1. Start MySQL locally and ensure a database named `mediline` exists.
+   - If MySQL is installed as a local service, start it with:
 
 ```bash
-sudo service postgresql start
+sudo service mysql start
 ```
 
    - Create the database if needed:
 
 ```bash
-sudo -u postgres psql -c "CREATE DATABASE mediline;"
+mysql -u root -p -e "CREATE DATABASE IF NOT EXISTS mediline;"
 ```
 
 2. Set the database environment variables before starting the app:
 
 ```bash
-export DB_URL=jdbc:postgresql://localhost:5432/mediline
-export DB_USERNAME=postgres
-export DB_PASSWORD=postgres
+export DB_URL='jdbc:mysql://localhost:3306/mediline?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC'
+export DB_USERNAME=root
+export DB_PASSWORD=''
 ```
 
 3. Open a terminal in the `backend` folder.
