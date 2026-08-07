@@ -4,18 +4,20 @@
 
 ### Backend
 
-**Option 1: Without MySQL (Recommended for Development)**
+**Start the backend (No setup required!)**
 
-The app uses an H2 in-memory database by default, so you can start developing right away:
+The app uses an embedded H2 file-based database that creates automatically:
 
 ```bash
 cd backend
 mvn spring-boot:run
 ```
 
-The backend will run on `http://localhost:8080` with H2 database.
+✅ The backend will run on `http://localhost:8080` with persistent H2 database
+✅ Database file stored in `data/mediline.mv.db` 
+✅ Data persists between restarts
 
-**Option 2: With MySQL**
+**Optional: Use MySQL instead**
 
 If you want to use a real MySQL database, first set it up:
 
@@ -34,12 +36,10 @@ export DB_PASSWORD=mediline
 mvn spring-boot:run
 ```
 
-**Note:** If MySQL is not running, clear the environment variables to use H2:
+**Tip:** To go back to H2, just unset the MySQL env vars:
 ```bash
 unset DB_URL DB_USERNAME DB_PASSWORD DB_DRIVER DB_DIALECT
 ```
-
-The backend runs on `http://localhost:8080` by default.
 
 ### Frontend
 
