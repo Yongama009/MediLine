@@ -4,28 +4,40 @@
 
 ### Backend
 
-Before starting the backend, make sure MySQL is running and that the `mediline` database exists.
+**Option 1: Without MySQL (Recommended for Development)**
 
-Example setup:
+The app uses an H2 in-memory database by default, so you can start developing right away:
+
+```bash
+cd backend
+mvn spring-boot:run
+```
+
+The backend will run on `http://localhost:8080` with H2 database.
+
+**Option 2: With MySQL**
+
+If you want to use a real MySQL database, first set it up:
 
 ```bash
 sudo service mysql start
 mysql -u root -p -e "CREATE DATABASE IF NOT EXISTS mediline;"
 ```
 
-Then from the `backend` folder:
+Then configure the database connection:
 
 ```bash
 cd backend
 export DB_URL='jdbc:mysql://localhost:3306/mediline?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC'
 export DB_USERNAME=mediline
 export DB_PASSWORD=mediline
-mvn clean install
 mvn spring-boot:run
 ```
 
-If your local MySQL server does not accept those credentials, the app will still start with its built-in in-memory fallback so you can continue developing.
-
+**Note:** If MySQL is not running, clear the environment variables to use H2:
+```bash
+unset DB_URL DB_USERNAME DB_PASSWORD DB_DRIVER DB_DIALECT
+```
 
 The backend runs on `http://localhost:8080` by default.
 
