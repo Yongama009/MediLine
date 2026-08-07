@@ -28,14 +28,15 @@ public class PatientAuthenticationProvider implements AuthenticationProvider {
     @Override
     public Authentication authenticate(Authentication authentication) throws AuthenticationException {
         String username = authentication.getName();
-        String rawPassword = (authentication.getCredentials() == null) ? null : authentication.getCredentials().toString();
+        String rawPassword = (authentication.getCredentials() == null) ? null
+                : authentication.getCredentials().toString();
 
         if (username == null) {
-            throw new BadCredentialsException("Invalid email or password");
+            throw new BadCredentialsException("Incorrect username or password");
         }
 
         Patient patient = patientRepository.findByEmailIgnoreCase(username.trim())
-                .orElseThrow(() -> new BadCredentialsException("Invalid email or password"));
+                .orElseThrow(() -> new BadCredentialsException("Incorrect username or password"));
 
         String storedPassword = patient.getPassword();
         boolean matches = false;
@@ -44,7 +45,8 @@ public class PatientAuthenticationProvider implements AuthenticationProvider {
             // BCrypt hashed
             matches = passwordEncoder.matches(rawPassword, storedPassword);
         } else {
-            // Legacy plain-text password: compare directly and migrate to BCrypt on successful match
+            // Legacy plain-text password: compare directly and migrate to BCrypt on
+            // successful match
             if (storedPassword != null && storedPassword.equals(rawPassword)) {
                 matches = true;
                 try {
@@ -57,7 +59,7 @@ public class PatientAuthenticationProvider implements AuthenticationProvider {
         }
 
         if (!matches) {
-            throw new BadCredentialsException("Invalid email or password");
+            throw new BadCredentialsException("Incorrect username or password");
         }
 
         UserDetails user = User.withUsername(patient.getEmail())
@@ -73,4 +75,3 @@ public class PatientAuthenticationProvider implements AuthenticationProvider {
         return UsernamePasswordAuthenticationToken.class.isAssignableFrom(authentication);
     }
 }
-

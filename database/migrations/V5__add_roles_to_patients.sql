@@ -13,6 +13,7 @@ INSERT INTO
         role
     )
 SELECT 'admin', '0000000000', 'admin@mediline.clinic', 'password', 'Seeded administrator account', 'ADMIN'
+FROM dual
 WHERE
     NOT EXISTS (
         SELECT 1

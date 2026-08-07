@@ -4,27 +4,42 @@
 
 ### Backend
 
-Before starting the backend, make sure PostgreSQL is running and that the `mediline` database exists.
+**Start the backend (No setup required!)**
 
-Example setup:
-
-```bash
-sudo service postgresql start
-sudo -u postgres psql -c "CREATE DATABASE mediline;"
-```
-
-Then from the `backend` folder:
+The app uses an embedded H2 file-based database that creates automatically:
 
 ```bash
 cd backend
-export DB_URL=jdbc:postgresql://localhost:5432/mediline
-export DB_USERNAME=postgres
-export DB_PASSWORD=postgres
-mvn clean install
 mvn spring-boot:run
 ```
 
-The backend runs on `http://localhost:8080` by default.
+✅ The backend will run on `http://localhost:8080` with persistent H2 database
+✅ Database file stored in `data/mediline.mv.db` 
+✅ Data persists between restarts
+
+**Optional: Use MySQL instead**
+
+If you want to use a real MySQL database, first set it up:
+
+```bash
+sudo service mysql start
+mysql -u root -p -e "CREATE DATABASE IF NOT EXISTS mediline;"
+```
+
+Then configure the database connection:
+
+```bash
+cd backend
+export DB_URL='jdbc:mysql://localhost:3306/mediline?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC'
+export DB_USERNAME=mediline
+export DB_PASSWORD=mediline
+mvn spring-boot:run
+```
+
+**Tip:** To go back to H2, just unset the MySQL env vars:
+```bash
+unset DB_URL DB_USERNAME DB_PASSWORD DB_DRIVER DB_DIALECT
+```
 
 ### Frontend
 

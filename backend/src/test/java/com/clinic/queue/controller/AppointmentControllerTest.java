@@ -6,10 +6,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.http.HttpHeaders;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
@@ -61,5 +63,13 @@ class AppointmentControllerTest {
         // Verifies that unauthenticated users are unauthorized.
         mockMvc.perform(put("/api/appointments/1/confirm"))
                 .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void shouldReturnClearMessageForInvalidAdminCredentials() throws Exception {
+        mockMvc.perform(put("/api/appointments/1/confirm")
+                .header(HttpHeaders.AUTHORIZATION, "Basic dXNlcjp3cm9uZ3Bhc3N3b3Jk"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.message").value("Incorrect username or password"));
     }
 }

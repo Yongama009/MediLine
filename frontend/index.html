@@ -526,7 +526,7 @@
                         dateFormat: "Y-m-d\TH:i",
                         time_24hr: false,
                         // disable Saturdays (6) and Sundays (0)
-                        disable: [function(date) {
+                        disable: [function (date) {
                             const d = date.getDay();
                             return d === 0 || d === 6;
                         }]
@@ -548,7 +548,7 @@
                 const data = await response.json();
 
                 if (!response.ok) {
-                    statusElement.textContent = data.message || 'Invalid email or password';
+                    statusElement.textContent = data.message || 'Incorrect username or password';
                     statusElement.className = 'message error';
                     return;
                 }
@@ -644,7 +644,7 @@
                 }, 500);
             } catch (error) {
                 adminAuthHeader = null;
-                statusElement.textContent = error.message || 'Invalid admin credentials';
+                statusElement.textContent = error.message || 'Incorrect username or password';
                 statusElement.className = 'message error';
             }
         }

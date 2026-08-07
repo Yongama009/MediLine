@@ -37,7 +37,7 @@ public class AuthController {
 
         if (patientOpt.isEmpty()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(
-                    new LoginResponse(null, "Invalid email or password", null, null));
+                    new LoginResponse(null, "Incorrect username or password", null, null));
         }
 
         Patient patient = patientOpt.get();
@@ -62,7 +62,7 @@ public class AuthController {
 
         if (!matches) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(
-                    new LoginResponse(null, "Invalid email or password", null, null));
+                    new LoginResponse(null, "Incorrect username or password", null, null));
         }
 
         // Generate a simple token (in production, use JWT)
