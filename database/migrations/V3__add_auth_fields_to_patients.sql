@@ -7,7 +7,11 @@ ADD COLUMN password VARCHAR(255) NOT NULL DEFAULT 'temp';
 -- Update the default values for existing rows
 UPDATE patients
 SET
-    email = 'patient' || id || '@mediline.clinic'
+    email = CONCAT(
+        'patient',
+        id,
+        '@mediline.clinic'
+    )
 WHERE
     email = 'temp@example.com';
 

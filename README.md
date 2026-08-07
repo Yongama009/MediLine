@@ -4,25 +4,28 @@
 
 ### Backend
 
-Before starting the backend, make sure PostgreSQL is running and that the `mediline` database exists.
+Before starting the backend, make sure MySQL is running and that the `mediline` database exists.
 
 Example setup:
 
 ```bash
-sudo service postgresql start
-sudo -u postgres psql -c "CREATE DATABASE mediline;"
+sudo service mysql start
+mysql -u root -p -e "CREATE DATABASE IF NOT EXISTS mediline;"
 ```
 
 Then from the `backend` folder:
 
 ```bash
 cd backend
-export DB_URL=jdbc:postgresql://localhost:5432/mediline
-export DB_USERNAME=postgres
-export DB_PASSWORD=postgres
+export DB_URL='jdbc:mysql://localhost:3306/mediline?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC'
+export DB_USERNAME=mediline
+export DB_PASSWORD=mediline
 mvn clean install
 mvn spring-boot:run
 ```
+
+If your local MySQL server does not accept those credentials, the app will still start with its built-in in-memory fallback so you can continue developing.
+
 
 The backend runs on `http://localhost:8080` by default.
 
