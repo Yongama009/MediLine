@@ -1,6 +1,5 @@
 /home/wtc27/personal_project/MediLine/backend/src/main/java/com/clinic/queue/ClinicQueueApplication.java
 /home/wtc27/personal_project/MediLine/backend/src/main/java/com/clinic/queue/config/AsyncConfig.java
-/home/wtc27/personal_project/MediLine/backend/src/main/java/com/clinic/queue/config/DataSourceConfig.java
 /home/wtc27/personal_project/MediLine/backend/src/main/java/com/clinic/queue/controller/AdminController.java
 /home/wtc27/personal_project/MediLine/backend/src/main/java/com/clinic/queue/controller/AppointmentController.java
 /home/wtc27/personal_project/MediLine/backend/src/main/java/com/clinic/queue/controller/AuthController.java

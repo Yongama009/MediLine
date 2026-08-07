@@ -1,7 +1,6 @@
 com/clinic/queue/controller/AppointmentController.class
 com/clinic/queue/service/AppointmentService.class
 com/clinic/queue/repository/AppointmentRepository.class
-com/clinic/queue/config/DataSourceConfig.class
 com/clinic/queue/service/PatientService.class
 com/clinic/queue/controller/AuthController.class
 com/clinic/queue/security/SecurityConfig.class
