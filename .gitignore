@@ -22,3 +22,8 @@ backend/data/
 # Environment
 .env
 .env.local
+.venv/
+
+# Local terminal output files
+/s -ltnp ( sport = :8080 )
+/tgres psql -h localhost -U postgres -d mediline -c SELECT version();

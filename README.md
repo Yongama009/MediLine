@@ -4,56 +4,51 @@
 
 ### Backend
 
-**Start the backend (No setup required!)**
+**Start the backend with MySQL**
 
-The app uses an embedded H2 file-based database that creates automatically:
-
-```bash
-cd backend
-mvn spring-boot:run
-```
-
-✅ The backend will run on `http://localhost:8080` with persistent H2 database
-✅ Database file stored in `data/mediline.mv.db` 
-✅ Data persists between restarts
-
-**Optional: Use MySQL instead**
-
-If you want to use a real MySQL database, first set it up:
+Make sure MySQL is running locally and that a database named `mediline` exists:
 
 ```bash
 sudo service mysql start
-mysql -u root -p -e "CREATE DATABASE IF NOT EXISTS mediline;"
+mysql -u root -p -e "CREATE DATABASE IF NOT EXISTS mediline; CREATE USER IF NOT EXISTS 'mediline'@'localhost' IDENTIFIED BY 'mediline'; GRANT ALL PRIVILEGES ON mediline.* TO 'mediline'@'localhost'; FLUSH PRIVILEGES;"
 ```
 
-Then configure the database connection:
+Then start the backend:
 
 ```bash
 cd backend
 export DB_URL='jdbc:mysql://localhost:3306/mediline?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC'
 export DB_USERNAME=mediline
 export DB_PASSWORD=mediline
+export ADMIN_REGISTRATION_CODE='choose-a-private-code'
 mvn spring-boot:run
 ```
 
-**Tip:** To go back to H2, just unset the MySQL env vars:
+The backend runs on `http://localhost:8080` and uses MySQL by default.
+
+**Optional: use H2 locally**
+
+If you want to switch back to the embedded H2 database for local testing, set the following before running:
+
 ```bash
-unset DB_URL DB_USERNAME DB_PASSWORD DB_DRIVER DB_DIALECT
+export DB_URL='jdbc:h2:./data/mediline;MODE=MySQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE'
+export DB_DRIVER=''
+export DB_USERNAME='sa'
+export DB_PASSWORD=''
+export DB_DIALECT='org.hibernate.dialect.H2Dialect'
 ```
 
-### Frontend
+## Separate frontend
 
-From the `frontend` folder:
+The frontend is maintained in the sibling `MediLine-front` repository. Start it
+in a separate terminal after starting the backend:
 
 ```bash
-cd frontend
+cd ../MediLine-front/frontend
 python3 -m http.server 3000
 ```
 
-Open `http://localhost:3000` in your browser.
-
-> Start the backend first so the frontend can connect to `http://localhost:8080`.
-
-## Features
-
-The frontend supports login and registration and communicates with the backend API at `http://localhost:8080`.
+Open `http://localhost:3000`. The frontend calls the backend at
+`http://localhost:8080/api`; the backend allows `http://localhost:3000` through
+CORS by default. The frontend should communicate with the backend over HTTP and
+should never connect directly to MySQL.

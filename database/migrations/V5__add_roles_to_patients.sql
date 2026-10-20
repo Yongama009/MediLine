@@ -1,5 +1,25 @@
-ALTER TABLE patients
-ADD COLUMN IF NOT EXISTS role VARCHAR(50) NOT NULL DEFAULT 'PATIENT';
+SET
+    @role_column_exists := (
+        SELECT COUNT(*)
+        FROM information_schema.columns
+        WHERE
+            table_schema = DATABASE()
+            AND table_name = 'patients'
+            AND column_name = 'role'
+    );
+
+SET
+    @sql := IF(
+        @role_column_exists = 0,
+        'ALTER TABLE patients ADD COLUMN role VARCHAR(50) NOT NULL DEFAULT ''PATIENT''',
+        'SELECT 1'
+    );
+
+PREPARE stmt FROM @sql;
+
+EXECUTE stmt;
+
+DEALLOCATE PREPARE stmt;
 
 UPDATE patients SET role = 'PATIENT' WHERE role IS NULL;
 

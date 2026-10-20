@@ -14,10 +14,11 @@ public class PatientService {
 
     private final PatientRepository patientRepository;
     private final org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
-    @Value("${admin.registration.code:ADMIN_SECRET_2024}")
+    @Value("${admin.registration.code:}")
     private String adminRegistrationCode;
 
-    public PatientService(PatientRepository patientRepository, org.springframework.security.crypto.password.PasswordEncoder passwordEncoder) {
+    public PatientService(PatientRepository patientRepository,
+            org.springframework.security.crypto.password.PasswordEncoder passwordEncoder) {
         this.patientRepository = patientRepository;
         this.passwordEncoder = passwordEncoder;
     }
