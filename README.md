@@ -52,3 +52,5 @@ Open `http://localhost:3000`. The frontend calls the backend at
 `http://localhost:8080/api`; the backend allows `http://localhost:3000` through
 CORS by default. The frontend should communicate with the backend over HTTP and
 should never connect directly to MySQL.
+
+WTC-SQKPVED4
