@@ -26,6 +26,41 @@ mvn spring-boot:run
 
 The backend runs on `http://localhost:8080` and uses MySQL by default.
 
+## Deploy the backend to AWS Elastic Beanstalk
+
+The backend includes the AWS SDK for S3 and an Elastic Beanstalk `Procfile`.
+S3 operations are not currently implemented in the application.
+
+1. Create an Elastic Beanstalk web application using the Java 21 platform.
+2. Build an Elastic Beanstalk source bundle from the backend:
+
+   ```bash
+   cd backend
+   mvn clean package
+   mkdir -p target/eb-bundle
+   cp target/queue-1.0.0-SNAPSHOT.jar target/eb-bundle/application.jar
+   cp Procfile target/eb-bundle/Procfile
+   (cd target/eb-bundle && zip -r ../mediline-eb.zip .)
+   ```
+
+3. Upload `backend/target/mediline-eb.zip` as an application version and deploy it
+   to an environment.
+4. Configure the environment properties in Elastic Beanstalk:
+   - `DB_URL`: JDBC URL for an AWS-hosted MySQL database such as Amazon RDS
+   - `DB_USERNAME` and `DB_PASSWORD`: database credentials
+   - `ADMIN_REGISTRATION_CODE`: a private registration code
+   - `CORS_ALLOWED_ORIGINS`: the deployed frontend origin
+
+   Do not expose the database publicly; allow connections from the Elastic
+   Beanstalk environment's security group. Keep secrets in Elastic Beanstalk
+   environment properties or AWS Secrets Manager, not in source control.
+
+The service listens on port `5000` in the AWS deployment. Flyway migrations
+are packaged from `database/migrations/` and run on application startup.
+When the application begins using S3, grant its Elastic Beanstalk EC2 instance
+profile only the required bucket permissions; do not put AWS access keys in
+the application configuration.
+
 **Optional: use H2 locally**
 
 If you want to switch back to the embedded H2 database for local testing, set the following before running:
